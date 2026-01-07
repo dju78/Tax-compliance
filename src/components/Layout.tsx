@@ -46,7 +46,7 @@ export function Layout({ children, activeView, onNavigate }: LayoutProps) {
                 flexShrink: 0
             }}>
                 <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ width: '32px', height: '32px', background: '#0f172a', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>D</div>
+                    <img src="/deap-logo.png" alt="DEAP Logo" style={{ height: '40px', objectFit: 'contain' }} />
                     {sidebarOpen && (
                         <div>
                             <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#1e293b' }}>DEAP</div>
