@@ -42,6 +42,13 @@ function App() {
       pitInput: defaultPit,
       citInput: defaultCit,
       vatInput: defaultVat
+    },
+    'personal': {
+      company: { id: 'personal', name: 'Personal Accounts' },
+      statementData: null,
+      pitInput: defaultPit,
+      citInput: defaultCit,
+      vatInput: defaultVat
     }
   });
 
