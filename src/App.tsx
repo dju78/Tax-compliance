@@ -103,10 +103,12 @@ function App() {
         <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>
           Nigeria Tax <span style={{ color: 'var(--color-accent)' }}>Automator</span>
         </h1>
-        <p style={{ fontSize: '1.2rem', color: '#475569', marginBottom: '0.25rem', fontWeight: '500' }}>
+        <p style={{ fontSize: '1.5rem', marginBottom: '0.25rem', fontWeight: '500', color: '#1e293b' }}>
+          Finance Act 2025–Compliant Tax Computation Engine
+        </p>
+        <p style={{ fontSize: '1rem', color: '#475569', fontWeight: '400' }}>
           For Individuals, SMEs, and Tax Practitioners
         </p>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Finance Act 2025 Compliant Engine</p>
 
         {activeTab !== 'Statement' && (
           <button
@@ -136,27 +138,30 @@ function App() {
       ) : (
         <div className="glass-panel" style={{ maxWidth: '800px', margin: '0 auto', padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
-            <nav style={{ display: 'flex', gap: '1rem', overflowX: 'auto' }}>
-              {['Statement', 'PIT', 'CIT', 'VAT'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab as any)}
-                  style={{
-                    padding: '0.5rem 1.5rem',
-                    border: 'none',
-                    background: 'transparent',
-                    borderBottom: activeTab === tab ? '2px solid var(--color-accent)' : 'none',
-                    fontWeight: activeTab === tab ? 'bold' : 'normal',
-                    color: activeTab === tab ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                    cursor: 'pointer',
-                    fontSize: '1.1rem',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {tab === 'Statement' ? '📂 Upload' : `${tab} Calc`}
-                </button>
-              ))}
-            </nav>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <nav style={{ display: 'flex', gap: '1rem', overflowX: 'auto' }}>
+                {['Statement', 'PIT', 'CIT', 'VAT'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab as any)}
+                    style={{
+                      padding: '0.5rem 1.5rem',
+                      border: 'none',
+                      background: 'transparent',
+                      borderBottom: activeTab === tab ? '2px solid var(--color-accent)' : 'none',
+                      fontWeight: activeTab === tab ? 'bold' : 'normal',
+                      color: activeTab === tab ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                      cursor: 'pointer',
+                      fontSize: '1.1rem',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {tab === 'Statement' ? 'Upload' : `${tab} Calc`}
+                  </button>
+                ))}
+              </nav>
+              <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Select a module to compute estimated tax liabilities based on Finance Act 2025 rules.</p>
+            </div>
             {activeTab !== 'VAT' && activeTab !== 'Statement' && (
               <button
                 onClick={() => setMode('guided')}
@@ -173,13 +178,20 @@ function App() {
                   fontSize: '0.9rem'
                 }}
               >
-                <span>✨ Wizard</span>
+                <span title="Answer simple questions and let the system complete the computation for you.">Guided Filing</span>
               </button>
             )}
           </div>
 
           {activeTab === 'Statement' && (
             <div>
+              {/* Upload Tab Copy */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.5rem', color: '#1e293b' }}>Upload Financial Records</h2>
+                <p style={{ color: '#64748b' }}>Upload bank statements or income records to auto-populate your tax computation.</p>
+                <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.25rem' }}>Accepted formats: CSV, Excel (XLSX)</p>
+              </div>
+
               {/* Statement Sub-Navigation */}
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', background: '#f1f5f9', padding: '0.25rem', borderRadius: '0.5rem', width: 'fit-content' }}>
                 {['upload', 'ledger', 'cashflow'].map(view => (
@@ -266,16 +278,17 @@ function PitCalculator({ input, setInput }: { input: PitInput, setInput: (v: Pit
       <h2 style={{ marginBottom: '1rem' }}>Personal Income Tax (Finance Act 2025)</h2>
       <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label>Gross Income (₦)</label>
+          <label title="Enter total income earned for the year before deductions.">Gross Income (₦)</label>
           <input
             type="number"
             value={input.gross_income}
             onChange={e => setInput({ ...input, gross_income: Number(e.target.value) })}
             style={inputStyle}
+            placeholder="Enter total income earned..."
           />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label>Business Expenses (₦)</label>
+          <label title="Allowable expenses incurred wholly and exclusively for income generation.">Business Expenses (₦)</label>
           <input
             type="number"
             value={input.allowable_deductions}
@@ -284,7 +297,7 @@ function PitCalculator({ input, setInput }: { input: PitInput, setInput: (v: Pit
           />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label>Actual Rent Paid (₦)</label>
+          <label title="Total rent paid during the assessment year.">Actual Rent Paid (₦)</label>
           <input
             type="number"
             value={input.actual_rent_paid}
@@ -294,35 +307,69 @@ function PitCalculator({ input, setInput }: { input: PitInput, setInput: (v: Pit
         </div>
       </div>
 
-      <div style={{ marginTop: '0.5rem', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--color-primary)' }}>
-        Note: Rent Deduction is Lower of Actual Rent Paid OR (20% of Gross, Max 500k).
+      <div style={{ marginTop: '0.5rem', fontStyle: 'italic', fontSize: '0.85rem', color: '#64748b' }}>
+        Rent relief is the lower of actual rent paid or 20% of gross income, capped at ₦500,000.
       </div>
 
       <div className="card" style={{ marginTop: '2rem', background: 'var(--color-bg)' }}>
-        <h3 style={{ borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>Results</h3>
+        <h3 style={{ borderBottom: '1px solid #ddd', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Results</h3>
         {result.is_exempt ? (
           <p style={{ color: 'var(--color-success)', fontWeight: 'bold', fontSize: '1.1rem' }}>✅ EXEMPT (Income ≤ ₦800,000)</p>
         ) : (
-          <>
-            <p><strong>Rent Relief Used:</strong> ₦{result.reliefs.toLocaleString()}</p>
-            <p><strong>Taxable Income:</strong> ₦{result.taxable_income.toLocaleString()}</p>
-            <p style={{ marginTop: '1rem', fontSize: '1.25rem' }}>
-              <strong>Tax Payable:</strong> <span style={{ color: 'var(--color-primary)' }}>₦{result.tax_payable.toLocaleString()}</span>
-            </p>
-            <small style={{ color: 'var(--color-text-muted)' }}>Effective Rate: {(result.effective_rate * 100).toFixed(2)}%</small>
-          </>
+          <div style={{ display: 'grid', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Tax Payable</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>₦{result.tax_payable.toLocaleString()}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Effective Tax Rate</span>
+              <span>{(result.effective_rate * 100).toFixed(2)}%</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Taxable Income</span>
+              <span>₦{result.taxable_income.toLocaleString()}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Rent Relief Applied</span>
+              <span>₦{result.reliefs.toLocaleString()}</span>
+            </div>
+          </div>
         )}
+      </div>
+
+      {/* Assumptions Wrapper */}
+      <details style={{ marginTop: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', cursor: 'pointer' }}>
+        <summary style={{ fontWeight: 'bold', color: '#475569' }}>Assumptions Used</summary>
+        <ul style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#64748b', paddingLeft: '1.5rem', lineHeight: '1.6' }}>
+          <li>Computation follows Finance Act 2025 provisions.</li>
+          <li>Consolidated Relief Allowance (CRA) applied where applicable.</li>
+          <li>Rent relief capped at ₦500,000.</li>
+          <li>No tax credits, PAYE deductions, or prior payments applied.</li>
+          <li>Results represent an estimated liability, not a final assessment.</li>
+        </ul>
+      </details>
+
+      {/* Action Buttons */}
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', flexWrap: 'wrap' }}>
+        <button style={primaryButtonStyle}>Save This Computation</button>
+        <button style={secondaryButtonStyle}>Continue to Full Tax Return</button>
+        <button style={tertiaryButtonStyle}>Generate Statement of Account</button>
       </div>
     </div>
   );
 }
+
+const primaryButtonStyle = { background: 'var(--color-primary)', color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' };
+const secondaryButtonStyle = { background: 'white', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' };
+const tertiaryButtonStyle = { background: 'transparent', color: '#64748b', border: 'none', padding: '0.75rem', cursor: 'pointer', textDecoration: 'underline' };
 
 function CitCalculator({ input, setInput }: { input: CitInput, setInput: (v: CitInput) => void }) {
   const result = calculateCIT(input);
 
   return (
     <div>
-      <h2 style={{ marginBottom: '1rem' }}>Company Income Tax (Finance Act 2025)</h2>
+      <h2 style={{ marginBottom: '1rem' }}>Corporate Income Tax (CIT)</h2>
+      <p style={{ marginBottom: '1.5rem', color: '#64748b' }}>Compute estimated corporate income tax based on Finance Act 2025 rules.</p>
       <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <label>Turnover (₦)</label>
@@ -370,6 +417,7 @@ function VatCalculator() {
   return (
     <div>
       <h2 style={{ marginBottom: '1rem' }}>Value Added Tax (VAT)</h2>
+      <p style={{ marginBottom: '1.5rem', color: '#64748b' }}>Calculate VAT payable or refundable from recorded transactions.</p>
       <div style={{ marginBottom: '1rem' }}>
         <label>
           <input
