@@ -103,7 +103,10 @@ function App() {
         <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>
           Nigeria Tax <span style={{ color: 'var(--color-accent)' }}>Automator</span>
         </h1>
-        <p style={{ color: 'var(--color-text-muted)' }}>Finance Act 2025 Compliant Engine</p>
+        <p style={{ fontSize: '1.2rem', color: '#475569', marginBottom: '0.25rem', fontWeight: '500' }}>
+          For Individuals, SMEs, and Tax Practitioners
+        </p>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Finance Act 2025 Compliant Engine</p>
 
         {activeTab !== 'Statement' && (
           <button
