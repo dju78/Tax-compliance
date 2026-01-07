@@ -108,7 +108,7 @@ export function Layout({ children, activeView, onNavigate }: LayoutProps) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#ffedd5', color: '#c2410c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>JA</div>
                         <div style={{ overflow: 'hidden' }}>
-                            <div style={{ fontSize: '0.9rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Joseph A.</div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Daramola Omoyele</div>
                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Admin</div>
                         </div>
                     </div>
