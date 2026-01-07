@@ -1,12 +1,25 @@
 import { useState } from 'react';
+import type { Company } from '../engine/types';
 
 interface LayoutProps {
     children: React.ReactNode;
     activeView: string;
     onNavigate: (view: string) => void;
+    activeCompanyId?: string;
+    companies?: Company[];
+    onSwitchCompany?: (id: string) => void;
+    onAddCompany?: () => void;
 }
 
-export function Layout({ children, activeView, onNavigate }: LayoutProps) {
+export function Layout({
+    children,
+    activeView,
+    onNavigate,
+    activeCompanyId,
+    companies = [],
+    onSwitchCompany,
+    onAddCompany
+}: LayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
     const NavItem = ({ view, label, icon }: { view: string, label: string, icon: string }) => (
