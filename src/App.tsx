@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import type { Transaction, StatementSummary, Company } from './engine/types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
@@ -147,13 +147,18 @@ function App() {
   };
 
   const handleStatementUpdate = (updatedTxns: Transaction[]) => {
-    setStatementData(prev => prev ? { ...prev, transactions: updatedTxns } : null);
+    // Correctly updating nested state logic
+    if (!activeSession.statementData) return;
+    const newData = { ...activeSession.statementData, transactions: updatedTxns };
+
+    // Update session
+    const updatedSessions = { ...sessions, [activeCompanyId]: { ...sessions[activeCompanyId], statementData: newData } };
+    setSessions(updatedSessions);
+    // Also update local view if needed (though session usually drives it)
+    setStatementData(newData);
   };
 
-  const handleDownloadExcel = () => {
-    if (!activeSession.statementData) return;
-    generateExcelWorkbook(activeSession.statementData.transactions);
-  };
+
 
   // Helper for reused components
   const NoDataFallback = () => (
@@ -197,7 +202,6 @@ function App() {
             transactions={statementData.transactions}
             onUpdate={handleStatementUpdate}
             onNavigate={setActiveView}
-            onDownloadExcel={handleDownloadExcel}
           />
         ) : <NoDataFallback />;
 

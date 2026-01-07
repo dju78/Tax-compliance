@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import type { Company, DividendVoucher, DividendVoucherLine } from '../engine/types';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { DividendVoucherPDF } from '../pdf/DividendVoucherPDF';
