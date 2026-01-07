@@ -70,4 +70,36 @@ export interface Company {
     name: string;
     sector?: string;
     description?: string;
+    reg_number?: string;
+    address?: string;
+}
+
+export interface DividendVoucher {
+    id: string;
+    company_id: string;
+    voucher_number: string; // e.g. DIV-2025-001
+    status: 'draft' | 'final';
+    date_of_payment: Date;
+    tax_year_label: string;
+
+    shareholder_name: string;
+    shareholder_address: string;
+    shares_held: number;
+    share_class: string; // e.g. 'Ordinary'
+
+    gross_dividend: number;
+    tax_credit: number; // 0 for strict validation, but field kept for legacy
+
+    lines: DividendVoucherLine[];
+
+    // Signatures / Meta
+    authorised_by_name?: string;
+    authorised_by_role?: string;
+    received_by_name?: string;
+}
+
+export interface DividendVoucherLine {
+    id: string;
+    description: string;
+    amount: number;
 }

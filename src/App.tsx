@@ -19,15 +19,22 @@ import type { PitInput } from './engine/pit';
 import { type CitInput } from './engine/cit';
 import { type VatInput } from './engine/vat';
 import { generateExcelWorkbook } from './engine/excel';
+import { DividendVoucherList } from './components/DividendVoucherList';
+import { DividendVoucherForm } from './components/DividendVoucherForm';
+import type { DividendVoucher } from './engine/types';
+
 // Multi-Company State
 function App() {
   const [activeView, setActiveView] = useState('dashboard');
+  const [editingVoucherId, setEditingVoucherId] = useState<string | null>(null);
+
   interface CompanySession {
     company: Company;
     statementData: { transactions: Transaction[], summary: StatementSummary } | null;
     pitInput: PitInput;
     citInput: CitInput;
     vatInput: VatInput;
+    dividendVouchers: DividendVoucher[];
   }
 
   const defaultPit: PitInput = { gross_income: 5000000, allowable_deductions: 500000, non_taxable_income: 0, actual_rent_paid: 1000000 };
@@ -41,14 +48,16 @@ function App() {
       statementData: null,
       pitInput: defaultPit,
       citInput: defaultCit,
-      vatInput: defaultVat
+      vatInput: defaultVat,
+      dividendVouchers: []
     },
     'personal': {
       company: { id: 'personal', name: 'Personal Accounts' },
       statementData: null,
       pitInput: defaultPit,
       citInput: defaultCit,
-      vatInput: defaultVat
+      vatInput: defaultVat,
+      dividendVouchers: []
     }
   });
 
@@ -74,6 +83,27 @@ function App() {
   const setVatInput = (input: VatInput | ((prev: VatInput) => VatInput)) =>
     updateSession(s => ({ ...s, vatInput: typeof input === 'function' ? input(s.vatInput) : input }));
 
+  const handleSaveVoucher = (voucher: DividendVoucher) => {
+    updateSession(s => {
+      const exists = s.dividendVouchers.find(v => v.id === voucher.id);
+      return {
+        ...s,
+        dividendVouchers: exists
+          ? s.dividendVouchers.map(v => v.id === voucher.id ? voucher : v)
+          : [...s.dividendVouchers, voucher]
+      };
+    });
+    setActiveView('dividend_vouchers');
+  };
+
+  const handleDeleteVoucher = (id: string) => {
+    if (!confirm('Are you sure you want to delete this voucher?')) return;
+    updateSession(s => ({
+      ...s,
+      dividendVouchers: s.dividendVouchers.filter(v => v.id !== id)
+    }));
+  };
+
   const handleAddCompany = () => {
     const name = prompt("Enter new company name:");
     if (!name) return;
@@ -85,7 +115,8 @@ function App() {
         statementData: null,
         pitInput: defaultPit,
         citInput: defaultCit,
-        vatInput: defaultVat
+        vatInput: defaultVat,
+        dividendVouchers: []
       }
     }));
     setActiveCompanyId(id);
@@ -119,6 +150,11 @@ function App() {
     setStatementData(prev => prev ? { ...prev, transactions: updatedTxns } : null);
   };
 
+  const handleDownloadExcel = () => {
+    if (!activeSession.statementData) return;
+    generateExcelWorkbook(activeSession.statementData.transactions);
+  };
+
   // Helper for reused components
   const NoDataFallback = () => (
     <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
@@ -141,7 +177,7 @@ function App() {
   );
 
   const renderContent = () => {
-    const { statementData, pitInput, citInput, vatInput } = activeSession;
+    const { statementData, pitInput, citInput, vatInput, dividendVouchers } = activeSession;
 
     switch (activeView) {
       case 'dashboard':
@@ -179,6 +215,27 @@ function App() {
       case 'tax_pit': return <TaxPIT transactions={statementData?.transactions || []} savedInput={pitInput} onSave={setPitInput} onNavigate={setActiveView} />;
       case 'tax_cit': return <TaxCIT transactions={statementData?.transactions || []} savedInput={citInput} onSave={setCitInput} onNavigate={setActiveView} />;
       case 'tax_vat': return <TaxVAT transactions={statementData?.transactions || []} savedInput={vatInput} onSave={setVatInput} onNavigate={setActiveView} />;
+
+      case 'dividend_vouchers':
+        return (
+          <DividendVoucherList
+            vouchers={dividendVouchers}
+            onCreate={() => { setEditingVoucherId(null); setActiveView('dividend_voucher_form'); }}
+            onEdit={(id) => { setEditingVoucherId(id); setActiveView('dividend_voucher_form'); }}
+            onDelete={handleDeleteVoucher}
+          />
+        );
+
+      case 'dividend_voucher_form':
+        const voucherToEdit = editingVoucherId ? dividendVouchers.find(v => v.id === editingVoucherId) : undefined;
+        return (
+          <DividendVoucherForm
+            company={activeSession.company}
+            initialData={voucherToEdit}
+            onSave={handleSaveVoucher}
+            onCancel={() => setActiveView('dividend_vouchers')}
+          />
+        );
 
       case 'reports':
         // Switching to Reports component which is more general

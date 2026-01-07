@@ -80,6 +80,7 @@ export function Layout({
                     <NavItem view="tax_cit" label="Tax Computation" icon="calculator" />
                     <NavItem view="filing_pack" label="Filing Pack" icon="📦" />
                     <NavItem view="reports" label="Reports" icon="📑" />
+                    <NavItem view="dividend_vouchers" label="Dividend Vouchers" icon="📜" />
 
                     <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>System</div>
                     <NavItem view="settings" label="Settings" icon="⚙️" />
