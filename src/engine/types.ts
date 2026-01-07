@@ -64,3 +64,10 @@ export interface StatementSummary {
     period_start?: Date;
     period_end?: Date;
 }
+
+export interface Company {
+    id: string;
+    name: string;
+    sector?: string;
+    description?: string;
+}
