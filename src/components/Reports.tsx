@@ -18,7 +18,6 @@ export function Reports({ transactions, summary, pitInput, citInput, vatInput }:
     const handleDownloadPdf = (type: 'SUMMARY' | 'PIT' | 'CIT' | 'VAT' = 'SUMMARY') => {
         generatePDFReport({
             type,
-            summary: type === 'SUMMARY' ? summary : undefined, // Include statement breakdown for summary
             statementSummary: type === 'SUMMARY' ? summary : undefined,
             pit: pitInput,
             cit: citInput,

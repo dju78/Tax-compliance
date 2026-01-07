@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { parseCSV } from '../engine/parser';
-import { Transaction, StatementSummary } from '../engine/types';
+import type { Transaction, StatementSummary } from '../engine/types';
 
 interface UploadZoneProps {
     onUpload: (data: { transactions: Transaction[], summary: StatementSummary }) => void;
@@ -9,7 +8,6 @@ interface UploadZoneProps {
 
 export function UploadZone({ onUpload }: UploadZoneProps) {
     const [isDragging, setIsDragging] = useState(false);
-    const [file, setFile] = useState<File | null>(null);
     const [showMapping, setShowMapping] = useState(false);
     const [headers, setHeaders] = useState<string[]>([]);
     const [rawRows, setRawRows] = useState<any[][]>([]);
@@ -34,7 +32,6 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
     };
 
     const processFile = (f: File) => {
-        setFile(f);
         const reader = new FileReader();
 
         if (f.name.endsWith('.csv')) {

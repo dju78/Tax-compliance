@@ -65,11 +65,6 @@ function App() {
     setStatementData(prev => prev ? { ...prev, transactions: updatedTxns } : null);
   };
 
-  const handleDownloadExcel = () => {
-    if (!statementData) return;
-    generateExcelWorkbook(statementData.transactions);
-  };
-
   // Helper for reused components
   const NoDataFallback = () => (
     <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>

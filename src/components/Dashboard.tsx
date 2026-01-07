@@ -1,8 +1,6 @@
-import { StatementSummary } from '../engine/types';
+import type { StatementSummary } from '../engine/types';
 
-interface DashboardProps {
-    summary: StatementSummary | null;
-}
+
 
 export function Dashboard({ summary, onNavigate }: { summary: StatementSummary | null, onNavigate: (view: string) => void }) {
 

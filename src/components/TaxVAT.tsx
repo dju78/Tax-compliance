@@ -6,12 +6,13 @@ interface TaxVATProps {
     transactions: Transaction[];
     savedInput: VatInput;
     onSave: (input: VatInput) => void;
+    onNavigate?: (view: string) => void;
 }
 
 const VATABLE_KEYWORDS = ['sales', 'service', 'supply', 'consulting', 'contract'];
 const VATABLE_EXPENSES = ['utilities', 'supplies', 'maintenance', 'repairs'];
 
-export function TaxVAT({ transactions, savedInput, onSave }: TaxVATProps) {
+export function TaxVAT({ transactions, savedInput, onSave, onNavigate }: TaxVATProps) {
     const [input, setInput] = useState<VatInput>(savedInput);
     const [autoSync, setAutoSync] = useState(true);
 

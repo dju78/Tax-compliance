@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Transaction } from '../engine/types';
-import { calculatePIT, PitInput } from '../engine/pit';
+import type { Transaction } from '../engine/types';
+import { calculatePIT, type PitInput } from '../engine/pit';
 
 interface TaxPITProps {
     transactions: Transaction[];

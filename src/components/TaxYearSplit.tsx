@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Transaction } from '../engine/types';
+import type { Transaction } from '../engine/types';
 
 interface TaxYearSplitProps {
     transactions: Transaction[];

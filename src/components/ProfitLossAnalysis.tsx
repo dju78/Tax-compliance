@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Transaction } from '../engine/types';
+import type { Transaction } from '../engine/types';
 
 interface ProfitLossProps {
     transactions: Transaction[];
@@ -169,7 +169,7 @@ function SectionHeader({ title }: { title: string }) {
     );
 }
 
-function Row({ label, value, isExpense, onClick }: { label: string, value: number, isExpense?: boolean, onClick: () => void }) {
+function Row({ label, value, onClick }: { label: string, value: number, isExpense?: boolean, onClick: () => void }) {
     return (
         <tr onClick={onClick} style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
             <td style={{ padding: '1rem', color: '#334155' }}>

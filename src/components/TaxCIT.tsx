@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Transaction } from '../engine/types';
-import { calculateCIT, CitInput } from '../engine/cit';
+import type { Transaction } from '../engine/types';
+import { calculateCIT, type CitInput } from '../engine/cit';
 
 interface TaxCITProps {
     transactions: Transaction[];
     savedInput: CitInput;
     onSave: (input: CitInput) => void;
+    onNavigate?: (view: string) => void;
 }
 
-export function TaxCIT({ transactions, savedInput, onSave }: TaxCITProps) {
+export function TaxCIT({ transactions, savedInput, onSave, onNavigate }: TaxCITProps) {
     const [input, setInput] = useState<CitInput>(savedInput);
     const [autoSync, setAutoSync] = useState(true);
 

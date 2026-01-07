@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Transaction } from '../engine/types';
+import type { Transaction } from '../engine/types';
 
 interface SmartLedgerProps {
     transactions: Transaction[];

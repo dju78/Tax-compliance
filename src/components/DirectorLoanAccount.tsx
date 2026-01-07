@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Transaction } from '../engine/types';
+import { useMemo } from 'react';
+import type { Transaction } from '../engine/types';
 
 interface DirectorLoanProps {
     transactions: Transaction[];

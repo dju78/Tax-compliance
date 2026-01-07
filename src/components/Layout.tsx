@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Transaction } from '../engine/types';
 
 interface LayoutProps {
     children: React.ReactNode;

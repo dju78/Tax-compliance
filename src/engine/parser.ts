@@ -62,21 +62,6 @@ function calculateSummary(transactions: Transaction[]): StatementSummary {
     };
 }
 
-/**
- * Returns tax year string based on UK style (Apr 6 - Apr 5) as requested in sample.
- */
-function getTaxYear(date: Date): string {
-    const year = date.getFullYear();
-    // 6th April = Month 3 (0-indexed), Day 6
-    const startOfTaxYear = new Date(year, 3, 6);
-
-    if (date >= startOfTaxYear) {
-        return `${year}/${(year + 1).toString().slice(-2)}`;
-    } else {
-        return `${year - 1}/${year.toString().slice(-2)}`;
-    }
-}
-
 function parseCurrency(val: string): number {
     if (!val) return 0;
     // Remove currency symbols, commas

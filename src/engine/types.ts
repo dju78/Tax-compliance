@@ -6,6 +6,8 @@ export interface Transaction {
     date: Date;
     description: string;
     amount: number;          // Signed: >0 (Income/Funding), <0 (Expense/Repayment)
+    type?: 'credit' | 'debit'; // Legacy/Display support
+    category?: string;       // Legacy/Display support
 
     // Categorization
     category_id?: string;
