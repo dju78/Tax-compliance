@@ -12,9 +12,10 @@ interface FilingPackProps {
     pitInput: PitInput;
     citInput: CitInput;
     vatInput: VatInput;
+    onNavigate: (view: string) => void;
 }
 
-export function FilingPack({ transactions, summary, pitInput, citInput, vatInput }: FilingPackProps) {
+export function FilingPack({ transactions, summary, pitInput, citInput, vatInput, onNavigate }: FilingPackProps) {
     const [checklist, setChecklist] = useState({
         incomeReconciled: false,
         expensesReviewed: false,
@@ -104,6 +105,12 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
                                 label="Export Full Excel Pack"
                                 icon="📊"
                                 onClick={handleDownloadExcel}
+                                disabled={false}
+                            />
+                            <ActionButton
+                                label="Generate Dividend Voucher"
+                                icon="📜"
+                                onClick={() => onNavigate('dividend_vouchers')}
                                 disabled={false}
                             />
                         </div>

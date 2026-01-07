@@ -3,9 +3,10 @@ import type { Transaction } from '../engine/types';
 
 interface DirectorLoanProps {
     transactions: Transaction[];
+    onNavigate: (view: string) => void;
 }
 
-export function DirectorLoanAccount({ transactions }: DirectorLoanProps) {
+export function DirectorLoanAccount({ transactions, onNavigate }: DirectorLoanProps) {
     // Filter for DLA transactions
     // Logic: 
     // 1. Explicit Category "Director Loan"
@@ -84,6 +85,7 @@ export function DirectorLoanAccount({ transactions }: DirectorLoanProps) {
                             <th style={{ padding: '1rem', textAlign: 'right', color: '#166534' }}>Funds In (Credit)</th>
                             <th style={{ padding: '1rem', textAlign: 'right', color: '#dc2626' }}>Withdrawals (Debit)</th>
                             <th style={{ padding: '1rem', textAlign: 'right', color: '#334155' }}>Balance</th>
+                            <th style={{ width: '50px' }}></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -111,6 +113,29 @@ export function DirectorLoanAccount({ transactions }: DirectorLoanProps) {
                                 </td>
                                 <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold' }}>
                                     ₦{t.runningBalance.toLocaleString()}
+                                </td>
+                                <td style={{ padding: '0.5rem' }}>
+                                    {t.debit > 0 && (
+                                        <button
+                                            title="Convert to Dividend Voucher"
+                                            onClick={() => {
+                                                if (confirm('Create Dividend Voucher for this withdrawal?')) {
+                                                    // Potential improvement: Prefill form via state/context
+                                                    onNavigate('dividend_vouchers');
+                                                }
+                                            }}
+                                            style={{
+                                                cursor: 'pointer',
+                                                background: 'none',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                fontSize: '1.1rem',
+                                                padding: '0.2rem 0.4rem'
+                                            }}
+                                        >
+                                            📜
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}

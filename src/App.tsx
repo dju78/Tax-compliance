@@ -210,7 +210,7 @@ function App() {
         ) : <NoDataFallback />;
 
       case 'analysis_tax_year': return statementData ? <TaxYearSplit transactions={statementData.transactions} /> : <NoDataFallback />;
-      case 'analysis_dla': return statementData ? <DirectorLoanAccount transactions={statementData.transactions} /> : <NoDataFallback />;
+      case 'analysis_dla': return statementData ? <DirectorLoanAccount transactions={statementData.transactions} onNavigate={setActiveView} /> : <NoDataFallback />;
 
       case 'tax_pit': return <TaxPIT transactions={statementData?.transactions || []} savedInput={pitInput} onSave={setPitInput} onNavigate={setActiveView} />;
       case 'tax_cit': return <TaxCIT transactions={statementData?.transactions || []} savedInput={citInput} onSave={setCitInput} onNavigate={setActiveView} />;
@@ -257,6 +257,7 @@ function App() {
             pitInput={pitInput}
             citInput={citInput}
             vatInput={vatInput}
+            onNavigate={setActiveView}
           />
         ) : <NoDataFallback />;
 
