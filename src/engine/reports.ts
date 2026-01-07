@@ -1,8 +1,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { PitResult } from './pit';
-import type { CitResult } from './cit';
-import type { VatResult } from './vat';
+import type { PitResult, PitInput } from './pit';
+import type { CitResult, CitInput } from './cit';
+import type { VatResult, VatInput } from './vat';
 import type { StatementSummary } from './types';
 
 // Extend jsPDF type to include autoTable
@@ -11,12 +11,16 @@ interface jsPDFWithAutoTable extends jsPDF {
 }
 
 interface ReportData {
-    type: 'PIT' | 'CIT' | 'VAT';
+    type: 'PIT' | 'CIT' | 'VAT' | 'SUMMARY';
     pitResult?: PitResult;
     citResult?: CitResult;
     vatResult?: VatResult;
     statementSummary?: StatementSummary;
     date: Date;
+    // For SUMMARY
+    pit?: PitInput;
+    cit?: CitInput;
+    vat?: VatInput;
 }
 
 export function generatePDFReport(data: ReportData) {
@@ -60,41 +64,63 @@ export function generatePDFReport(data: ReportData) {
     // Section 2: Tax Computation
     doc.setFontSize(14);
     doc.setTextColor(0);
-    doc.text("2. Tax Liability Assessment", 14, finalY);
-    finalY += 5;
 
-    if (data.type === 'PIT' && data.pitResult) {
-        const res = data.pitResult;
+    if (data.type === 'SUMMARY') {
+        doc.text("2. Executive Tax Summary", 14, finalY);
+        finalY += 10;
+
+        // Use inputs to estimate if no result provided, or use results if we had them.
+        // For simplicity, just listing available figures.
+
+        const summaryBody = [];
+        if (data.pit) summaryBody.push(['PIT (Personal Income Tax)', `Gross: ₦${data.pit.gross_income.toLocaleString()}`]);
+        if (data.cit) summaryBody.push(['CIT (Company Income Tax)', `Profit: ₦${data.cit.assessable_profit.toLocaleString()}`]);
+        if (data.vat) summaryBody.push(['VAT (Value Added Tax)', `Net: ₦${(data.vat.output_vat - data.vat.input_vat).toLocaleString()}`]);
+
         autoTable(doc, {
             startY: finalY,
-            head: [['Item', 'Value']],
-            body: [
-                ['Gross Income', `₦${res.gross_income.toLocaleString()}`],
-                // Note: Using reliefs from result
-                ['Total Reliefs (Inc. Rent/CRA)', `(₦${res.reliefs.toLocaleString()})`],
-                ['Taxable Income', `₦${res.taxable_income.toLocaleString()}`],
-                ['Effective Tax Rate', `${(res.effective_rate * 100).toFixed(2)}%`],
-                ['Total PIT Payable', `₦${res.tax_payable.toLocaleString()}`]
-            ],
-            theme: 'striped',
-            headStyles: { fillColor: [46, 125, 50] } // Green for PIT
+            head: [['Tax Head', 'Key Figures']],
+            body: summaryBody,
+            theme: 'grid',
+            headStyles: { fillColor: [66, 66, 66] }
         });
-    } else if (data.type === 'CIT' && data.citResult) {
-        const res = data.citResult;
-        autoTable(doc, {
-            startY: finalY,
-            head: [['Item', 'Value']],
-            body: [
-                ['Assessed Category', `${res.category} Company`],
-                ['Assessable Profit', `₦${res.assessable_profit.toLocaleString()}`],
-                ['CIT Rate', `${res.tax_rate * 100}%`],
-                ['CIT Payable', `₦${res.tax_payable.toLocaleString()}`],
-                ['Development Levy (4%)', `₦${res.development_levy.toLocaleString()}`],
-                ['Total Tax Liability', `₦${(res.tax_payable + res.development_levy).toLocaleString()}`]
-            ],
-            theme: 'striped',
-            headStyles: { fillColor: [21, 101, 192] } // Blue for CIT
-        });
+
+    } else {
+        doc.text("2. Tax Liability Assessment", 14, finalY);
+        finalY += 5;
+
+        if (data.type === 'PIT' && data.pitResult) {
+            const res = data.pitResult;
+            autoTable(doc, {
+                startY: finalY,
+                head: [['Item', 'Value']],
+                body: [
+                    ['Gross Income', `₦${res.gross_income.toLocaleString()}`],
+                    ['Total Reliefs (Inc. Rent/CRA)', `(₦${res.reliefs.toLocaleString()})`],
+                    ['Taxable Income', `₦${res.taxable_income.toLocaleString()}`],
+                    ['Effective Tax Rate', `${(res.effective_rate * 100).toFixed(2)}%`],
+                    ['Total PIT Payable', `₦${res.tax_payable.toLocaleString()}`]
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [46, 125, 50] } // Green for PIT
+            });
+        } else if (data.type === 'CIT' && data.citResult) {
+            const res = data.citResult;
+            autoTable(doc, {
+                startY: finalY,
+                head: [['Item', 'Value']],
+                body: [
+                    ['Assessed Category', `${res.category} Company`],
+                    ['Assessable Profit', `₦${res.assessable_profit.toLocaleString()}`],
+                    ['CIT Rate', `${res.tax_rate * 100}%`],
+                    ['CIT Payable', `₦${res.tax_payable.toLocaleString()}`],
+                    ['Development Levy (4%)', `₦${res.development_levy.toLocaleString()}`],
+                    ['Total Tax Liability', `₦${(res.tax_payable + res.development_levy).toLocaleString()}`]
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [21, 101, 192] } // Blue for CIT
+            });
+        }
     }
 
     // Footer / Disclaimer
@@ -103,6 +129,7 @@ export function generatePDFReport(data: ReportData) {
     doc.setTextColor(150);
     const disclaimer = "Disclaimer: This document is an estimate based on provided inputs. It does not constitute a legal tax assessment receipt from FIRS/JTB. Consult a chartered accountant for filing.";
     const splitText = doc.splitTextToSize(disclaimer, pageWidth - 30);
+    // Use doc.text for footer, ensure it's at bottom
     doc.text(splitText, 14, pageHeight - 20);
 
     // Save

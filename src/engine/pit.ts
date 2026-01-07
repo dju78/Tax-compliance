@@ -9,9 +9,12 @@ export interface PitResult {
   gross_income: number;
   taxable_income: number;
   reliefs: number;
+  cra: number;
+  rent_relief: number;
   tax_payable: number;
   effective_rate: number;
   is_exempt: boolean;
+  breakdown: { band: number; rate: number; tax: number; }[];
 }
 
 const EXEMPTION_THRESHOLD = 800_000;
@@ -22,14 +25,9 @@ const PIT_BANDS = [
   { threshold: 500_000, rate: 0.15 },
   { threshold: 500_000, rate: 0.19 },
   { threshold: 1_600_000, rate: 0.21 },
-  { threshold: Infinity, rate: 0.24 }, // Top rate
+  { threshold: Infinity, rate: 0.24 },
 ];
 
-/**
- * Calculates Rent Deduction / Relief (Finance Act 2025)
- * Logic: Lower of (Actual Rent Paid) OR (20% of Gross Income, Capped at ₦500k).
- * This encourages transparency and aligns with the "Rent Deduction" nomenclature.
- */
 export function calculateRelief(grossIncome: number, actualRent: number): number {
   const cap = Math.min(grossIncome * 0.20, 500_000);
   return Math.min(actualRent, cap);
@@ -44,42 +42,66 @@ export function calculatePIT(input: PitInput): PitResult {
       gross_income,
       taxable_income: 0,
       reliefs: 0,
+      cra: 0,
+      rent_relief: 0,
       tax_payable: 0,
       effective_rate: 0,
-      is_exempt: true
+      is_exempt: true,
+      breakdown: []
     };
   }
 
-  // 2. Calculate Reliefs
-  // Relief is on income AFTER business deductions usually, but for PIT on individuals (employees),
-  // it's on Gross Emoluments. For Business, it's typically on assessable profit.
-  // Let's assume Gross Income here is "Assessable Income".
-  // Note: Differentiate between 'Gross Business Revenue' and 'Personal Gross Income'.
-  // We assume input.gross_income here is the assessable base.
+  // 2. Consolidated Relief Allowance (CRA)
+  // Higher of ₦200,000 or 1% of Gross Income (whichever is higher) + 20% of Gross Income
+  // Note: "Gross Income" definition varies, usually Gross Emoluments. 
+  // We will use (input.gross_income - allowable_deductions) as the base if these are business expenses,
+  // but for simple PIT usually it's on the Gross. Let's assume input.gross_income is the correct base.
+  const craFixed = Math.max(200_000, gross_income * 0.01);
+  const craVariable = gross_income * 0.20;
+  const cra = craFixed + craVariable;
 
-  const relief = calculateRelief(gross_income - non_taxable_income, actual_rent_paid);
+  // 3. Rent Relief (New Finance Act)
+  const rent_relief = calculateRelief(gross_income, actual_rent_paid);
 
-  // 3. Taxable Income
-  let taxable_income = gross_income - allowable_deductions - non_taxable_income - relief;
+  // 4. Total Reliefs
+  // Note: non_taxable_income usually acts as a relief (Pension/NHF/Health)
+  const total_reliefs = cra + rent_relief + non_taxable_income;
+
+  // 5. Taxable Income
+  // Deduct Allowable Expenses (Business) first? Or are they part of "Reliefs"? 
+  // Usually Allowable Deductions reduce Gross to "Assessable", then Reliefs reduce Assessable to "Chargeable".
+  // Let's assume: Gross - Deductions - Reliefs = Taxable
+  let taxable_income = gross_income - allowable_deductions - total_reliefs;
   taxable_income = Math.max(0, taxable_income);
 
-  // 4. Compute Tax
+  // 6. Compute Tax (Chargeable Income)
   let tax_payable = 0;
   let remaining_taxable = taxable_income;
+  const breakdown: { band: number; rate: number; tax: number; }[] = [];
 
   for (const band of PIT_BANDS) {
     if (remaining_taxable <= 0) break;
+    // band.threshold is the WIDTH of the band, not the cumulative top.
+    // Wait, let's verify logic. standard tables: First 300k @ 7%, Next 300k @ 11%, etc.
+    // My constants in previous file were: { threshold: 300_000 ... } which implies width.
     const taxable_amount = Math.min(remaining_taxable, band.threshold);
-    tax_payable += taxable_amount * band.rate;
+    const tax_on_band = taxable_amount * band.rate;
+
+    tax_payable += tax_on_band;
+    breakdown.push({ band: taxable_amount, rate: band.rate, tax: tax_on_band });
+
     remaining_taxable -= taxable_amount;
   }
 
   return {
     gross_income,
     taxable_income,
-    reliefs: relief,
+    reliefs: total_reliefs,
+    cra,
+    rent_relief,
     tax_payable,
     effective_rate: gross_income > 0 ? (tax_payable / gross_income) : 0,
-    is_exempt: false
+    is_exempt: false,
+    breakdown
   };
 }
