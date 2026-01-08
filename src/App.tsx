@@ -120,6 +120,65 @@ function App() {
     setLoading(false);
   };
 
+  // Fetch transactions from DB
+  const loadTransactions = async (companyId: string) => {
+    const { data, error } = await supabase
+      .from('bank_transactions')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('txn_date', { ascending: true }); // or date if renamed
+
+    if (error) {
+      console.error('Error loading transactions:', error);
+      return;
+    }
+
+    if (data) {
+      const transactions: Transaction[] = data.map((row: any) => ({
+        id: row.id,
+        company_id: row.company_id,
+        date: new Date(row.txn_date || row.date), // Handle mapping
+        description: row.description || row.narration,
+        amount: Number(row.amount),
+        category_name: row.category_name || (Number(row.amount) > 0 ? 'Uncategorized Income' : 'Uncategorized Expense'),
+        tax_tag: row.tax_tag,
+        notes: row.notes,
+        sub_category: row.sub_category,
+        is_business: row.is_business,
+        excluded_from_tax: row.excluded_from_tax,
+        dla_status: row.dla_status || 'none',
+        tax_year_label: row.tax_year_label
+      }));
+
+      // Calc Summary
+      const total_inflow = transactions.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
+      const total_outflow = transactions.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
+      const summary: StatementSummary = {
+        total_inflow,
+        total_outflow,
+        net_cash_flow: total_inflow - total_outflow,
+        transaction_count: transactions.length,
+        period_start: transactions[0]?.date,
+        period_end: transactions[transactions.length - 1]?.date
+      };
+
+      setSessions(prev => ({
+        ...prev,
+        [companyId]: {
+          ...prev[companyId],
+          statementData: { transactions, summary }
+        }
+      }));
+    }
+  };
+
+  // Refetch when active company changes
+  useEffect(() => {
+    if (activeCompanyId && activeCompanyId !== 'default' && activeCompanyId !== 'personal') {
+      loadTransactions(activeCompanyId);
+    }
+  }, [activeCompanyId]);
+
   if (loading) {
     return (
       <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f1f5f9' }}>
@@ -201,68 +260,6 @@ function App() {
       alert('Error creating company: ' + e.message);
     }
   };
-
-  // Fetch transactions from DB
-  const loadTransactions = async (companyId: string) => {
-    const { data, error } = await supabase
-      .from('bank_transactions')
-      .select('*')
-      .eq('company_id', companyId)
-      .order('txn_date', { ascending: true }); // or date if renamed
-
-    if (error) {
-      console.error('Error loading transactions:', error);
-      return;
-    }
-
-    if (data) {
-      const transactions: Transaction[] = data.map((row: any) => ({
-        id: row.id,
-        company_id: row.company_id,
-        date: new Date(row.txn_date || row.date), // Handle mapping
-        description: row.description || row.narration,
-        amount: Number(row.amount),
-        category_name: row.category_name || (Number(row.amount) > 0 ? 'Uncategorized Income' : 'Uncategorized Expense'),
-        tax_tag: row.tax_tag,
-        notes: row.notes,
-        sub_category: row.sub_category,
-        is_business: row.is_business,
-        excluded_from_tax: row.excluded_from_tax,
-        dla_status: row.dla_status || 'none',
-        tax_year_label: row.tax_year_label
-      }));
-
-      // Calc Summary
-      const total_inflow = transactions.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
-      const total_outflow = transactions.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
-      const summary: StatementSummary = {
-        total_inflow,
-        total_outflow,
-        net_cash_flow: total_inflow - total_outflow,
-        transaction_count: transactions.length,
-        period_start: transactions[0]?.date,
-        period_end: transactions[transactions.length - 1]?.date
-      };
-
-      setSessions(prev => ({
-        ...prev,
-        [companyId]: {
-          ...prev[companyId],
-          statementData: { transactions, summary }
-        }
-      }));
-    }
-  };
-
-  // Refetch when active company changes
-  useEffect(() => {
-    if (activeCompanyId && activeCompanyId !== 'default' && activeCompanyId !== 'personal') {
-      // Only fetch for real companies usually, but 'default'/'personal' might be in DB now too?
-      // If 'default' is in DB (we created it there?), fetch it.
-      // Our loadCompanies fetched them all.
-      loadTransactions(activeCompanyId);
-    }
-  }, [activeCompanyId]);
 
 
   const handleStatementUpload = async (data: { transactions: Transaction[], summary: StatementSummary }) => {
