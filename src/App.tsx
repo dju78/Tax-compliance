@@ -253,7 +253,7 @@ function App() {
           />
         ) : <NoDataFallback />;
 
-      case 'filing': // Keeping FilingPack accessible if needed via explicit route, though default nav goes here
+      case 'filing_pack': // Keeping FilingPack accessible if needed via explicit route, though default nav goes here
         return statementData ? (
           <FilingPack
             transactions={statementData.transactions}
