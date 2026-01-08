@@ -140,7 +140,7 @@ function AutoCatRules() {
                         <td style={{ padding: '0.75rem', color: '#94a3b8', cursor: 'pointer' }}>🗑️</td>
                     </tr>
                     <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '0.75rem' }}>"FIRS" or "LIRS"</td>
+                        <td style={{ padding: '0.75rem' }}>"NRS" or "LIRS"</td>
                         <td style={{ padding: '0.75rem' }}>Tax Paid</td>
                         <td style={{ padding: '0.75rem' }}>-</td>
                         <td style={{ padding: '0.75rem', color: '#94a3b8', cursor: 'pointer' }}>🗑️</td>

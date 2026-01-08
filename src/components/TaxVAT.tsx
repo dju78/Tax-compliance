@@ -128,7 +128,7 @@ export function TaxVAT({ transactions, savedInput, onSave, onNavigate }: TaxVATP
                             {formatCurrency(Math.abs(result.vat_payable))}
                         </div>
                         <div style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: '500' }}>
-                            {result.vat_payable > 0 ? 'PAYABLE TO FIRS' : 'REFUND DUE'}
+                            {result.vat_payable > 0 ? 'PAYABLE TO NRS' : 'REFUND DUE'}
                         </div>
                     </div>
                 </div>

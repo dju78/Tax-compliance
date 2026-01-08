@@ -127,7 +127,7 @@ export function generatePDFReport(data: ReportData) {
     const pageHeight = doc.internal.pageSize.height;
     doc.setFontSize(10);
     doc.setTextColor(150);
-    const disclaimer = "Disclaimer: This document is an estimate based on provided inputs. It does not constitute a legal tax assessment receipt from FIRS/JTB. Consult a chartered accountant for filing.";
+    const disclaimer = "Disclaimer: This document is an estimate based on provided inputs. It does not constitute a legal tax assessment receipt from NRS/JTB. Consult a chartered accountant for filing.";
     const splitText = doc.splitTextToSize(disclaimer, pageWidth - 30);
     // Use doc.text for footer, ensure it's at bottom
     doc.text(splitText, 14, pageHeight - 20);
