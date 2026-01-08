@@ -321,9 +321,9 @@ export function Layout({
                                     {/* Drawer Footer */}
                                     <div style={{ padding: '1rem', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
                                         <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem', fontWeight: 'bold' }}>Need more help?</div>
-                                        <div style={{ display: 'flex', gap: '1rem' }}>
-                                            <a href="#" style={{ color: '#16a34a', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' }}>WhatsApp Support</a>
-                                            <a href="#" style={{ color: '#0284c7', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' }}>Email Us</a>
+                                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                            <a href="https://wa.me/2348068421761" target="_blank" style={{ color: '#16a34a', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' }}>WhatsApp (+234 806 842 1761)</a>
+                                            <a href="mailto:dju78@yahoo.com" style={{ color: '#0284c7', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' }}>Email: dju78@yahoo.com</a>
                                         </div>
                                     </div>
                                 </div>
