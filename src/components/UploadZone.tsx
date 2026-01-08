@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-
+import * as XLSX from 'xlsx';
 import type { Transaction, StatementSummary } from '../engine/types';
 
 interface UploadZoneProps {
@@ -37,62 +37,92 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
         if (f.name.endsWith('.csv')) {
             reader.onload = (e) => {
                 const text = e.target?.result as string;
-                import('../engine/parsers/csvParser').then(({ parseCSV }) => {
-                    const { headers: h, rows: r } = parseCSV(text);
-                    setHeaders(h);
-                    setRawRows(r);
-                    setShowMapping(true);
-                });
+                // Parse CSV headers simply
+                const lines = text.split(/\r?\n/);
+                const h = lines[0].split(',').map(c => c.replace(/"/g, '').trim());
+                setHeaders(h);
+                setRawRows(lines.slice(1).map(l => l.split(',')));
+                setShowMapping(true);
             };
             reader.readAsText(f);
         } else {
-            // Excel - Keep existing logic or refactor later
-            import('xlsx').then((XLSX) => {
-                reader.onload = (e) => {
-                    const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
-                    if (json.length > 0) {
-                        setHeaders(json[0].map(h => String(h)));
-                        setRawRows(json.slice(1).map(row => row.map(c => String(c)))); // Ensure strings
-                        setShowMapping(true);
-                    }
-                };
-                reader.readAsArrayBuffer(f);
-            });
+            // Excel
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+                if (json.length > 0) {
+                    setHeaders(json[0].map(h => String(h)));
+                    setRawRows(json.slice(1));
+                    setShowMapping(true);
+                }
+            };
+            reader.readAsArrayBuffer(f);
         }
     };
 
     const handleConfirmMapping = () => {
-        import('../engine/parsers/csvParser').then(({ mapRowsToTransactions }) => {
-            const fileMapping = { ...mapping };
-            // Ensure incomplete mapping doesn't crash
-            if (!fileMapping.date || !fileMapping.description) {
-                alert("Please map at least Date and Description columns.");
-                return;
+        // Transform Raw Rows to Transactions using Mapping
+        const transactions: Transaction[] = [];
+
+        rawRows.forEach((row, idx) => {
+            const dateVal = row[headers.indexOf(mapping.date)];
+            const descVal = row[headers.indexOf(mapping.description)];
+
+            // Amount Logic
+            let amount = 0;
+            if (mapping.amount) {
+                // Signed Column
+                amount = parseVal(row[headers.indexOf(mapping.amount)]);
+            } else if (mapping.moneyIn && mapping.moneyOut) {
+                // Split Columns
+                const credit = parseVal(row[headers.indexOf(mapping.moneyIn)]);
+                const debit = parseVal(row[headers.indexOf(mapping.moneyOut)]);
+                if (debit > 0) amount = -Math.abs(debit);
+                else amount = Math.abs(credit);
             }
 
-            const transactions = mapRowsToTransactions(rawRows, headers, fileMapping, 'default'); // activeCompanyId injected later or here?
-
-            // Calc Summary helper
-            const total_inflow = transactions.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
-            const total_outflow = transactions.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
-
-            onUpload({
-                transactions,
-                summary: {
-                    total_inflow,
-                    total_outflow,
-                    net_cash_flow: total_inflow - total_outflow,
-                    transaction_count: transactions.length,
-                    period_start: transactions[0]?.date,
-                    period_end: transactions[transactions.length - 1]?.date
-                }
-            });
-
-            setShowMapping(false);
+            // Only add if valid
+            const dateObj = new Date(dateVal);
+            if (!isNaN(dateObj.getTime()) && !isNaN(amount)) {
+                transactions.push({
+                    id: `txn_${idx}`,
+                    company_id: 'default',
+                    date: dateObj,
+                    description: String(descVal || ''),
+                    amount: amount,
+                    is_business: true,
+                    dla_status: 'none',
+                    tax_year_label: dateObj.getFullYear().toString(),
+                    category_name: amount > 0 ? 'Uncategorized Income' : 'Uncategorized Expense'
+                });
+            }
         });
+
+        // Calc Summary
+        const total_inflow = transactions.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
+        const total_outflow = transactions.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
+
+        onUpload({
+            transactions,
+            summary: {
+                total_inflow,
+                total_outflow,
+                net_cash_flow: total_inflow - total_outflow,
+                transaction_count: transactions.length,
+                period_start: transactions[0]?.date,
+                period_end: transactions[transactions.length - 1]?.date
+            }
+        });
+
+        setShowMapping(false); // Close
+    };
+
+    const parseVal = (v: any) => {
+        if (typeof v === 'number') return v;
+        if (!v) return 0;
+        return parseFloat(String(v).replace(/[^\d.-]/g, '')) || 0;
     };
 
     return (

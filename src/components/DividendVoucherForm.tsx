@@ -47,7 +47,7 @@ export function DividendVoucherForm({ company, voucherId, initialData, onSave, o
 
     const fetchVoucher = async (id: string) => {
         setLoading(true);
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('dividend_vouchers')
             .select('*')
             .eq('id', id)
@@ -277,7 +277,7 @@ export function DividendVoucherForm({ company, voucherId, initialData, onSave, o
                     }}
                 >
                     {/*@ts-ignore*/}
-                    {({ blob, url, loading }) =>
+                    {({ blob, url, loading, error }) =>
                         loading ? 'Generating...' : 'Download PDF'
                     }
                 </PDFDownloadLink>

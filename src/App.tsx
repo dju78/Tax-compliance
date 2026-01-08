@@ -23,6 +23,7 @@ import { type VatInput } from './engine/vat';
 
 import { DividendVoucherList } from './components/DividendVoucherList';
 import { DividendVoucherForm } from './components/DividendVoucherForm';
+import type { DividendVoucher } from './engine/types';
 
 // Multi-Company State
 function App() {
@@ -68,127 +69,16 @@ function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) {
-        loadCompanies();
-      } else {
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) {
-        loadCompanies();
-      } else {
-        setLoading(false);
-        // Reset sessions on logout
-        setSessions({});
-      }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const loadCompanies = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from('companies').select('*');
-    if (error) {
-      console.error('Error loading companies:', error);
-      setLoading(false);
-      return;
-    }
-
-    if (data && data.length > 0) {
-      const newSessions: Record<string, CompanySession> = {};
-      data.forEach(company => {
-        newSessions[company.id] = {
-          company: company,
-          statementData: null,
-          pitInput: defaultPit,
-          citInput: defaultCit,
-          vatInput: defaultVat,
-          checklist: defaultChecklist,
-        };
-      });
-      setSessions(newSessions);
-      setActiveCompanyId(data[0].id);
-    } else {
-      setSessions({});
-      setActiveCompanyId('');
-      // Optionally trigger "Add Company" flow?
-    }
-    setLoading(false);
-  };
-
-  // Fetch transactions from DB
-  const loadTransactions = async (companyId: string) => {
-    const { data, error } = await supabase
-      .from('bank_transactions')
-      .select('*')
-      .eq('company_id', companyId)
-      .order('txn_date', { ascending: true }); // or date if renamed
-
-    if (error) {
-      console.error('Error loading transactions:', error);
-      return;
-    }
-
-    if (data) {
-      const transactions: Transaction[] = data.map((row: any) => ({
-        id: row.id,
-        company_id: row.company_id,
-        date: new Date(row.txn_date || row.date), // Handle mapping
-        description: row.description || row.narration,
-        amount: Number(row.amount),
-        category_name: row.category_name || (Number(row.amount) > 0 ? 'Uncategorized Income' : 'Uncategorized Expense'),
-        tax_tag: row.tax_tag,
-        notes: row.notes,
-        sub_category: row.sub_category,
-        is_business: row.is_business,
-        excluded_from_tax: row.excluded_from_tax,
-        dla_status: row.dla_status || 'none',
-        tax_year_label: row.tax_year_label
-      }));
-
-      // Calc Summary
-      const total_inflow = transactions.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
-      const total_outflow = transactions.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
-      const summary: StatementSummary = {
-        total_inflow,
-        total_outflow,
-        net_cash_flow: total_inflow - total_outflow,
-        transaction_count: transactions.length,
-        period_start: transactions[0]?.date,
-        period_end: transactions[transactions.length - 1]?.date
-      };
-
-      setSessions(prev => {
-        const existingSession = prev[companyId] || {
-          company: { id: companyId, name: 'Loading...' }, // Temporary fallback
-          statementData: null,
-          pitInput: defaultPit,
-          citInput: defaultCit,
-          vatInput: defaultVat,
-          checklist: defaultChecklist,
-        };
-
-        return {
-          ...prev,
-          [companyId]: {
-            ...existingSession,
-            statementData: { transactions, summary }
-          }
-        };
-      });
-    }
-  };
-
-  // Refetch when active company changes
-  useEffect(() => {
-    if (activeCompanyId && activeCompanyId !== 'default' && activeCompanyId !== 'personal') {
-      loadTransactions(activeCompanyId);
-    }
-  }, [activeCompanyId]);
 
   if (loading) {
     return (
@@ -217,6 +107,8 @@ function App() {
     }));
   };
 
+  const setStatementData = (data: { transactions: Transaction[], summary: StatementSummary } | null) =>
+    updateSession(s => ({ ...s, statementData: data }));
 
   const setPitInput = (input: PitInput | ((prev: PitInput) => PitInput)) =>
     updateSession(s => ({ ...s, pitInput: typeof input === 'function' ? input(s.pitInput) : input }));
@@ -232,203 +124,58 @@ function App() {
 
 
 
-  const handleAddCompany = async () => {
+  const handleAddCompany = () => {
     const name = prompt("Enter new company name:");
     if (!name) return;
-
-    try {
-      const { data, error } = await supabase.from('companies').insert([{
-        legal_name: name, // Mapped to correct DB column
-        profile_type: 'business', // Default
-        user_id: user.id // Default works, but explicit is fine too if auth context is correct
-      }]).select().single();
-
-      if (error) throw error;
-
-      if (data) {
-        // Map DB response back to local type if needed
-        const newCompany: Company = {
-          ...data,
-          name: data.legal_name || data.display_name || name
-        };
-
-        setSessions(prev => ({
-          ...prev,
-          [data.id]: {
-            company: newCompany,
-            statementData: null,
-            pitInput: defaultPit,
-            citInput: defaultCit,
-            vatInput: defaultVat,
-            checklist: defaultChecklist,
-          }
-        }));
-        setActiveCompanyId(data.id);
-        setActiveView('dashboard');
+    const id = `comp_${Date.now()}`;
+    setSessions(prev => ({
+      ...prev,
+      [id]: {
+        company: { id, name },
+        statementData: null,
+        pitInput: defaultPit,
+        citInput: defaultCit,
+        vatInput: defaultVat,
+        checklist: defaultChecklist,
       }
-    } catch (e: any) {
-      console.error('Error adding company:', e);
-      alert('Error creating company: ' + e.message);
-    }
+    }));
+    setActiveCompanyId(id);
+    setActiveView('dashboard');
   };
 
-  // Auto-create/find financial account
-  const ensureFinancialAccount = async (companyId: string) => {
-    // 1. Check existing
-    const { data: existing } = await supabase.from('financial_accounts')
-      .select('id')
-      .eq('company_id', companyId)
-      .limit(1)
-      .maybeSingle();
+  const handleStatementUpload = (data: { transactions: Transaction[], summary: StatementSummary }) => {
+    // Inject company_id into transactions
+    const taggedTransactions = data.transactions.map(t => ({ ...t, company_id: activeCompanyId }));
+    const taggedData = { ...data, transactions: taggedTransactions };
 
-    if (existing) return existing.id;
+    updateSession(s => ({
+      ...s,
+      statementData: taggedData,
+      pitInput: {
+        ...s.pitInput,
+        gross_income: data.summary.total_inflow,
+        allowable_deductions: data.summary.total_outflow,
+      },
+      citInput: {
+        ...s.citInput,
+        turnover: data.summary.total_inflow,
+        assessable_profit: Math.max(0, data.summary.net_cash_flow)
+      }
+    }));
 
-    console.log("Initializing financial account for company...");
-
-    // 2. Find/Create Ledger Account (Code 1001)
-    let ledgerId = null;
-    const { data: ledger } = await supabase.from('chart_accounts')
-      .select('id')
-      .eq('company_id', companyId)
-      .eq('code', '1001')
-      .limit(1)
-      .maybeSingle();
-
-    if (ledger) {
-      ledgerId = ledger.id;
-    } else {
-      // Create Ledger Account
-      const { data: newLedger, error: lErr } = await supabase.from('chart_accounts').insert({
-        company_id: companyId,
-        name: 'Main Bank Account',
-        code: '1001',
-        type: 'ASSET',
-        is_system: true,
-        is_active: true
-      }).select().single();
-
-      if (lErr) throw new Error("Failed to init ledger: " + lErr.message);
-      ledgerId = newLedger.id;
-    }
-
-    // 3. Create Financial Account
-    const { data: newFin, error: fErr } = await supabase.from('financial_accounts').insert({
-      company_id: companyId,
-      ledger_account_id: ledgerId, // Link to GL
-      display_name: 'Main Business Bank',
-      type: 'BANK', // Matches constraint? Check later if enum
-      is_default: true
-    }).select().single();
-
-    if (fErr) throw new Error("Failed to init financial account: " + fErr.message);
-    return newFin.id;
+    setActiveView('transactions');
   };
 
-  const handleStatementUpload = async (data: { transactions: Transaction[], summary: StatementSummary }) => {
-    try {
-      const finAccountId = await ensureFinancialAccount(activeCompanyId);
-
-      const rowsToInsert = data.transactions.map(t => ({
-        company_id: activeCompanyId,
-        user_id: user.id,
-        financial_account_id: finAccountId,
-        txn_date: t.date.toISOString().split('T')[0], // PG Date
-        description: t.description,
-        amount: t.amount,
-        is_business: true,
-        category_name: t.category_name,
-        tax_year_label: t.date.getFullYear().toString(),
-        dla_status: 'none'
-      }));
-
-      const { error } = await supabase.from('bank_transactions').insert(rowsToInsert);
-      if (error) throw error;
-
-      alert(`Successfully imported ${rowsToInsert.length} transactions!`);
-
-      // loadTransactions(activeCompanyId); // Legacy fetch
-      // Force reload to get fresh data until state mgmt is improved
-      window.location.reload();
-
-    } catch (e: any) {
-      console.error("Upload error:", e);
-      alert("Failed to save transactions: " + e.message);
-    }
-  };
-
-  // Empty State Check (Placed here to access handleAddCompany)
-  if (user && !loading && !activeSession && Object.keys(sessions).length === 0) {
-    return (
-      <Layout
-        activeView="dashboard"
-        onNavigate={setActiveView}
-        activeCompanyId=""
-        companies={[]}
-        onSwitchCompany={setActiveCompanyId}
-        onAddCompany={handleAddCompany}
-        onLogout={handleLogout}
-      >
-        <div style={{ textAlign: 'center', marginTop: '4rem' }}>
-          <h2>Welcome to DEAP</h2>
-          <p style={{ color: '#64748b', marginBottom: '2rem' }}>You don't have any companies yet.</p>
-          <button
-            onClick={handleAddCompany}
-            style={{ padding: '0.75rem 1.5rem', background: '#0f172a', color: 'white', border: 'none', borderRadius: '6px', fontSize: '1rem', cursor: 'pointer' }}
-          >
-            Create Your First Company
-          </button>
-        </div>
-      </Layout>
-    );
-  } else if (user && !activeSession) {
-    if (Object.keys(sessions).length > 0) {
-      // If we have sessions but activeSession is invalid, reset to first
-      // Avoid infinite loop if render is fast, but this is a return
-      setActiveCompanyId(Object.keys(sessions)[0]);
-      return <div>Redirecting...</div>
-    }
-  }
-
-  const handleStatementUpdate = async (updatedTxns: Transaction[]) => {
-    // Optimistic Update
+  const handleStatementUpdate = (updatedTxns: Transaction[]) => {
+    // Correctly updating nested state logic
     if (!activeSession.statementData) return;
     const newData = { ...activeSession.statementData, transactions: updatedTxns };
 
-    setSessions(prev => ({
-      ...prev,
-      [activeCompanyId]: { ...prev[activeCompanyId], statementData: newData }
-    }));
-
-    // Background Persistence
-    try {
-      const rowsToUpsert = updatedTxns.map(t => ({
-        id: t.id,
-        company_id: t.company_id,
-        user_id: user?.id, // Ensure user exists
-        txn_date: t.date.toISOString().split('T')[0],
-        description: t.description,
-        amount: t.amount,
-        category_name: t.category_name,
-        sub_category: t.sub_category,
-        tax_tag: t.tax_tag,
-        notes: t.notes,
-        dla_status: t.dla_status || 'none',
-        is_business: t.is_business,
-        excluded_from_tax: t.excluded_from_tax,
-        tax_year_label: t.tax_year_label,
-        // Preserve category_id if we had it, but mostly we use category_name for now
-        // category_id: t.category_id 
-      }));
-
-      // Use upsert
-      const { error } = await supabase.from('bank_transactions').upsert(rowsToUpsert);
-      if (error) {
-        console.error("Failed to persist changes:", error);
-        // Optionally revert state here if critical
-      }
-    } catch (e) {
-      console.error("Persistence exception:", e);
-    }
+    // Update session
+    const updatedSessions = { ...sessions, [activeCompanyId]: { ...sessions[activeCompanyId], statementData: newData } };
+    setSessions(updatedSessions);
+    // Also update local view if needed (though session usually drives it)
+    setStatementData(newData);
   };
 
 

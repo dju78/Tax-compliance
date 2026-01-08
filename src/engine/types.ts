@@ -81,9 +81,6 @@ export interface Company {
     profile_type?: 'individual' | 'business';
     nin?: string;
     business_type?: string;
-
-    // Infrastructure
-    default_bank_account_id?: string;
 }
 
 export interface DividendVoucher {
