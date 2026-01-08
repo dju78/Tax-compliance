@@ -13,6 +13,105 @@ export interface HelpArticle {
 
 export const HELP_CONTENT: HelpSection[] = [
     {
+        id: 'documentation',
+        title: 'Documentation',
+        icon: '📚',
+        content: [
+            {
+                title: 'Nigeria Revenue Service (NRS)',
+                keywords: ['nrs', 'firs', 'overview', 'taxes', 'mandate'],
+                body: `
+                    <h2>Overview</h2>
+                    <p>The Nigeria Revenue Service (NRS) is Nigeria's federal tax authority. It is responsible for administering and enforcing federal tax laws.</p>
+                    <p>NRS replaced the former Federal Inland Revenue Service (FIRS) as part of Nigeria's tax system reforms.</p>
+
+                    <h3>Mandate of the NRS</h3>
+                    <p>The Nigeria Revenue Service is responsible for:</p>
+                    <ul>
+                        <li>Assessing federal taxes</li>
+                        <li>Collecting tax revenues</li>
+                        <li>Enforcing tax compliance</li>
+                        <li>Issuing guidance and regulations</li>
+                        <li>Conducting audits and investigations</li>
+                    </ul>
+
+                    <h3>Taxes Administered by NRS</h3>
+                    <p>NRS oversees the administration of major federal taxes, including:</p>
+                    <ul>
+                        <li>Companies Income Tax (CIT)</li>
+                        <li>Value Added Tax (VAT)</li>
+                        <li>Withholding Tax (WHT)</li>
+                        <li>Capital Gains Tax (CGT)</li>
+                        <li>Petroleum Profits Tax (PPT)</li>
+                        <li>Federal Stamp Duties</li>
+                    </ul>
+
+                    <h3>Why NRS Matters to Users</h3>
+                    <p>If you operate a business or earn taxable income in Nigeria:</p>
+                    <ul>
+                        <li>Your federal tax obligations fall under NRS oversight</li>
+                        <li>Accurate records reduce audit and penalty risks</li>
+                        <li>Digital records are increasingly important for compliance</li>
+                    </ul>
+                    <p><em>DEAP structures financial records to align with common NRS reporting expectations.</em></p>
+
+                    <div style="background: #eff6ff; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <strong>Important Note:</strong> DEAP supports tax computation and record organisation. Final tax filings remain the responsibility of the taxpayer.
+                    </div>
+                `
+            },
+            {
+                title: 'Recent Nigerian Tax Reforms',
+                keywords: ['reform', 'compliance', 'sme', 'digital'],
+                body: `
+                    <h2>Purpose of the Reforms</h2>
+                    <p>Nigeria has introduced tax reforms to:</p>
+                    <ul>
+                        <li>Improve voluntary compliance</li>
+                        <li>Increase transparency</li>
+                        <li>Strengthen digital record-keeping</li>
+                        <li>Reduce revenue leakage</li>
+                        <li>Support SMEs and business formalisation</li>
+                    </ul>
+
+                    <h3>Key Reform Themes</h3>
+                    <p>Recent reforms emphasise:</p>
+                    <ul>
+                        <li>Better documentation of income and expenses</li>
+                        <li>Clear separation of allowable and non-allowable expenses</li>
+                        <li>Stronger VAT and WHT reporting requirements</li>
+                        <li>Improved audit trails and transaction traceability</li>
+                        <li>Increased use of digital systems and data analytics</li>
+                    </ul>
+
+                    <h3>Practical Implications for Taxpayers</h3>
+                    <p>These reforms mean that taxpayers are expected to:</p>
+                    <ul>
+                        <li>Maintain complete transaction records</li>
+                        <li>Retain invoices and receipts</li>
+                        <li>Classify transactions accurately</li>
+                        <li>Track VAT and WHT consistently</li>
+                        <li>Prepare period-based reports</li>
+                    </ul>
+                    <p><strong>Poor documentation may lead to:</strong> Disallowed expenses, additional assessments, penalties, and interest.</p>
+
+                    <h3>How DEAP Fits In</h3>
+                    <p>DEAP is designed to support these reforms by:</p>
+                    <ul>
+                        <li>Organising transactions by tax period</li>
+                        <li>Applying consistent categorisation</li>
+                        <li>Separating VATable, exempt, and non-allowable items</li>
+                        <li>Producing structured, review-ready reports</li>
+                    </ul>
+
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+                        <strong>Disclaimer:</strong> This content is provided for educational purposes only. It does not constitute legal or tax advice. Users should consult official NRS guidance or a licensed tax professional where necessary.
+                    </div>
+                `
+            }
+        ]
+    },
+    {
         id: 'getting-started',
         title: 'Getting Started',
         icon: '🚀',
