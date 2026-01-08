@@ -46,7 +46,7 @@ export function TaxCIT({ transactions, savedInput, onSave, onNavigate }: TaxCITP
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e293b' }}>Company Income Tax (CIT)</h2>
                 {onNavigate && (
                     <button
-                        onClick={() => onNavigate('filing')}
+                        onClick={() => onNavigate('filing_pack')}
                         style={{ padding: '0.5rem 1rem', background: '#0f172a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', marginLeft: 'auto', marginRight: '1rem' }}
                     >
                         Next: Filing Pack →
