@@ -162,13 +162,24 @@ function App() {
         period_end: transactions[transactions.length - 1]?.date
       };
 
-      setSessions(prev => ({
-        ...prev,
-        [companyId]: {
-          ...prev[companyId],
-          statementData: { transactions, summary }
-        }
-      }));
+      setSessions(prev => {
+        const existingSession = prev[companyId] || {
+          company: { id: companyId, name: 'Loading...' }, // Temporary fallback
+          statementData: null,
+          pitInput: defaultPit,
+          citInput: defaultCit,
+          vatInput: defaultVat,
+          checklist: defaultChecklist,
+        };
+
+        return {
+          ...prev,
+          [companyId]: {
+            ...existingSession,
+            statementData: { transactions, summary }
+          }
+        };
+      });
     }
   };
 
@@ -261,12 +272,66 @@ function App() {
     }
   };
 
+  // Auto-create/find financial account
+  const ensureFinancialAccount = async (companyId: string) => {
+    // 1. Check existing
+    const { data: existing } = await supabase.from('financial_accounts')
+      .select('id')
+      .eq('company_id', companyId)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) return existing.id;
+
+    console.log("Initializing financial account for company...");
+
+    // 2. Find/Create Ledger Account (Code 1001)
+    let ledgerId = null;
+    const { data: ledger } = await supabase.from('chart_accounts')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('code', '1001')
+      .limit(1)
+      .maybeSingle();
+
+    if (ledger) {
+      ledgerId = ledger.id;
+    } else {
+      // Create Ledger Account
+      const { data: newLedger, error: lErr } = await supabase.from('chart_accounts').insert({
+        company_id: companyId,
+        name: 'Main Bank Account',
+        code: '1001',
+        type: 'ASSET',
+        is_system: true,
+        is_active: true
+      }).select().single();
+
+      if (lErr) throw new Error("Failed to init ledger: " + lErr.message);
+      ledgerId = newLedger.id;
+    }
+
+    // 3. Create Financial Account
+    const { data: newFin, error: fErr } = await supabase.from('financial_accounts').insert({
+      company_id: companyId,
+      ledger_account_id: ledgerId, // Link to GL
+      display_name: 'Main Business Bank',
+      type: 'BANK', // Matches constraint? Check later if enum
+      is_default: true
+    }).select().single();
+
+    if (fErr) throw new Error("Failed to init financial account: " + fErr.message);
+    return newFin.id;
+  };
 
   const handleStatementUpload = async (data: { transactions: Transaction[], summary: StatementSummary }) => {
     try {
+      const finAccountId = await ensureFinancialAccount(activeCompanyId);
+
       const rowsToInsert = data.transactions.map(t => ({
         company_id: activeCompanyId,
         user_id: user.id,
+        financial_account_id: finAccountId,
         txn_date: t.date.toISOString().split('T')[0], // PG Date
         description: t.description,
         amount: t.amount,
@@ -281,9 +346,9 @@ function App() {
 
       alert(`Successfully imported ${rowsToInsert.length} transactions!`);
 
-      // Refresh from DB to get generated IDs etc
-      loadTransactions(activeCompanyId);
-      setActiveView('transactions');
+      // loadTransactions(activeCompanyId); // Legacy fetch
+      // Force reload to get fresh data until state mgmt is improved
+      window.location.reload();
 
     } catch (e: any) {
       console.error("Upload error:", e);
@@ -391,6 +456,7 @@ function App() {
 
   const renderContent = () => {
     const { statementData, pitInput, citInput, vatInput, checklist } = activeSession;
+    console.log("Render Content:", { activeView, activeCompanyId, hasData: !!statementData });
 
     switch (activeView) {
       case 'dashboard':
@@ -479,7 +545,7 @@ function App() {
           onUpdateCompany={(updatedCompany) => updateSession(s => ({ ...s, company: updatedCompany }))}
         />;
 
-      default: return <div>Under Construction</div>;
+      default: return <div>Under Construction (View: {activeView})</div>;
     }
   };
 

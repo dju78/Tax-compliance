@@ -13,8 +13,6 @@ export function Settings({ company, onUpdateCompany }: SettingsProps) {
     const { role, loading } = useUserRole();
     const [activeTab, setActiveTab] = useState<'profile' | 'tax_year' | 'categories' | 'rules' | 'users'>('profile');
 
-    if (loading) return <div style={{ padding: '2rem' }}>Loading permissions...</div>;
-
     // Default to viewer if role missing or null
     const currentRole = role || 'viewer';
 
@@ -33,6 +31,8 @@ export function Settings({ company, onUpdateCompany }: SettingsProps) {
             else if (canReadUsers) setActiveTab('users');
         }
     }, [currentRole, canReadProfile, activeTab]);
+
+    if (loading) return <div style={{ padding: '2rem' }}>Loading permissions...</div>;
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
