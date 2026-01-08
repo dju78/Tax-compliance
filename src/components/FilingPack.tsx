@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { generateExcelWorkbook } from '../engine/excel';
 import { generatePDFReport } from '../engine/reports';
-import type { Transaction, StatementSummary } from '../engine/types';
+import type { Transaction, StatementSummary, FilingChecklist } from '../engine/types';
 import type { PitInput } from '../engine/pit';
 import type { CitInput } from '../engine/cit';
 import type { VatInput } from '../engine/vat';
@@ -12,16 +11,13 @@ interface FilingPackProps {
     pitInput: PitInput;
     citInput: CitInput;
     vatInput: VatInput;
+    checklist: FilingChecklist;
+    onChecklistChange: (checklist: FilingChecklist | ((prev: FilingChecklist) => FilingChecklist)) => void;
     onNavigate: (view: string) => void;
 }
 
-export function FilingPack({ transactions, summary, pitInput, citInput, vatInput, onNavigate }: FilingPackProps) {
-    const [checklist, setChecklist] = useState({
-        incomeReconciled: false,
-        expensesReviewed: false,
-        vatReconciled: false,
-        payeCredits: false,
-    });
+export function FilingPack({ transactions, summary, pitInput, citInput, vatInput, checklist, onChecklistChange, onNavigate }: FilingPackProps) {
+    // Local state removed, using props
 
     const allChecked = Object.values(checklist).every(Boolean);
 
@@ -46,8 +42,8 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
         alert("Pack saved! Your accountant can now access this snapshot.");
     };
 
-    const toggleCheck = (key: keyof typeof checklist) => {
-        setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
+    const toggleCheck = (key: keyof FilingChecklist) => {
+        onChecklistChange(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
     return (

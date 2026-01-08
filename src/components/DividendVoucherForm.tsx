@@ -1,21 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 import type { Company, DividendVoucher, DividendVoucherLine } from '../engine/types';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { DividendVoucherPDF } from '../pdf/DividendVoucherPDF';
 
 interface DividendVoucherFormProps {
     company: Company;
-    initialData?: DividendVoucher;
-    onSave: (voucher: DividendVoucher) => void;
+    voucherId?: string | null; // ID to fetch if editing
+    initialData?: DividendVoucher; // Optional backup or pre-loaded data
+    onSave: () => void;
     onCancel: () => void;
 }
 
-export function DividendVoucherForm({ company, initialData, onSave, onCancel }: DividendVoucherFormProps) {
+export function DividendVoucherForm({ company, voucherId, initialData, onSave, onCancel }: DividendVoucherFormProps) {
     // Generate ID and Number default if new
-    const isNew = !initialData;
+    const isNew = !voucherId && !initialData?.id;
     const defaultId = initialData?.id || crypto.randomUUID();
     const defaultNumber = initialData?.voucher_number || `DIV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
 
+    const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(!!voucherId && !initialData);
     const [formData, setFormData] = useState<DividendVoucher>(initialData || {
         id: defaultId,
         company_id: company.id,
@@ -34,6 +38,32 @@ export function DividendVoucherForm({ company, initialData, onSave, onCancel }: 
         authorised_by_role: 'Director',
         received_by_name: ''
     });
+
+    useEffect(() => {
+        if (voucherId && !initialData) {
+            fetchVoucher(voucherId);
+        }
+    }, [voucherId]);
+
+    const fetchVoucher = async (id: string) => {
+        setLoading(true);
+        const { data } = await supabase
+            .from('dividend_vouchers')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (data) {
+            setFormData({
+                ...data,
+                date_of_payment: new Date(data.date_of_payment)
+            } as DividendVoucher);
+        }
+        setLoading(false);
+    };
+
+    if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading voucher...</div>;
+
 
     const updateField = (field: keyof DividendVoucher, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -63,9 +93,25 @@ export function DividendVoucherForm({ company, initialData, onSave, onCancel }: 
         });
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.shareholder_name) return alert('Shareholder name required');
-        onSave(formData);
+
+        setSaving(true);
+        const { error } = await supabase
+            .from('dividend_vouchers')
+            .upsert({
+                ...formData,
+                created_at: undefined, // Let DB handle if new, or keep existing? Upsert handles it.
+                // Supabase expects Date objects for timestamptz/date columns or ISO strings.
+                date_of_payment: formData.date_of_payment,
+            });
+
+        setSaving(false);
+        if (error) {
+            alert('Error saving voucher: ' + error.message);
+        } else {
+            onSave();
+        }
     };
 
     return (
@@ -76,8 +122,8 @@ export function DividendVoucherForm({ company, initialData, onSave, onCancel }: 
                 </h2>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button onClick={onCancel} style={{ padding: '0.5rem 1rem', border: 'none', background: '#f1f5f9', borderRadius: '6px', cursor: 'pointer', color: '#64748b' }}>Cancel</button>
-                    <button onClick={handleSave} style={{ padding: '0.5rem 1rem', border: 'none', background: 'var(--color-primary)', color: 'white', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
-                        Save {formData.status === 'draft' ? 'Draft' : 'Voucher'}
+                    <button onClick={handleSave} disabled={saving} style={{ padding: '0.5rem 1rem', border: 'none', background: saving ? '#94a3b8' : 'var(--color-primary)', color: 'white', borderRadius: '6px', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: '600' }}>
+                        {saving ? 'Saving...' : `Save ${formData.status === 'draft' ? 'Draft' : 'Voucher'}`}
                     </button>
                 </div>
             </div>
@@ -231,7 +277,7 @@ export function DividendVoucherForm({ company, initialData, onSave, onCancel }: 
                     }}
                 >
                     {/*@ts-ignore*/}
-                    {({ blob, url, loading, error }) =>
+                    {({ blob, url, loading }) =>
                         loading ? 'Generating...' : 'Download PDF'
                     }
                 </PDFDownloadLink>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { Auth } from './components/Auth';
-import type { Transaction, StatementSummary, Company } from './engine/types';
+import type { Transaction, StatementSummary, Company, FilingChecklist } from './engine/types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { UploadZone } from './components/UploadZone';
@@ -23,7 +23,6 @@ import { type VatInput } from './engine/vat';
 
 import { DividendVoucherList } from './components/DividendVoucherList';
 import { DividendVoucherForm } from './components/DividendVoucherForm';
-import type { DividendVoucher } from './engine/types';
 
 // Multi-Company State
 function App() {
@@ -38,12 +37,13 @@ function App() {
     pitInput: PitInput;
     citInput: CitInput;
     vatInput: VatInput;
-    dividendVouchers: DividendVoucher[];
+    checklist: FilingChecklist;
   }
 
   const defaultPit: PitInput = { gross_income: 5000000, allowable_deductions: 500000, non_taxable_income: 0, actual_rent_paid: 1000000 };
   const defaultCit: CitInput = { turnover: 120000000, assessable_profit: 30000000 };
   const defaultVat: VatInput = { output_vat: 75000, input_vat: 25000, is_registered: true };
+  const defaultChecklist: FilingChecklist = { incomeReconciled: false, expensesReviewed: false, vatReconciled: false, payeCredits: false };
 
   const [activeCompanyId, setActiveCompanyId] = useState<string>('default');
   const [sessions, setSessions] = useState<Record<string, CompanySession>>({
@@ -53,7 +53,7 @@ function App() {
       pitInput: defaultPit,
       citInput: defaultCit,
       vatInput: defaultVat,
-      dividendVouchers: []
+      checklist: defaultChecklist,
     },
     'personal': {
       company: { id: 'personal', name: 'Personal Accounts' },
@@ -61,23 +61,64 @@ function App() {
       pitInput: defaultPit,
       citInput: defaultCit,
       vatInput: defaultVat,
-      dividendVouchers: []
+      checklist: defaultChecklist,
     }
   });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (session?.user) {
+        loadCompanies();
+      } else {
+        setLoading(false);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (session?.user) {
+        loadCompanies();
+      } else {
+        setLoading(false);
+        // Reset sessions on logout
+        setSessions({});
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const loadCompanies = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from('companies').select('*');
+    if (error) {
+      console.error('Error loading companies:', error);
+      setLoading(false);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      const newSessions: Record<string, CompanySession> = {};
+      data.forEach(company => {
+        newSessions[company.id] = {
+          company: company,
+          statementData: null,
+          pitInput: defaultPit,
+          citInput: defaultCit,
+          vatInput: defaultVat,
+          checklist: defaultChecklist,
+        };
+      });
+      setSessions(newSessions);
+      setActiveCompanyId(data[0].id);
+    } else {
+      setSessions({});
+      setActiveCompanyId('');
+      // Optionally trigger "Add Company" flow?
+    }
+    setLoading(false);
+  };
 
   if (loading) {
     return (
@@ -106,8 +147,6 @@ function App() {
     }));
   };
 
-  const setStatementData = (data: { transactions: Transaction[], summary: StatementSummary } | null) =>
-    updateSession(s => ({ ...s, statementData: data }));
 
   const setPitInput = (input: PitInput | ((prev: PitInput) => PitInput)) =>
     updateSession(s => ({ ...s, pitInput: typeof input === 'function' ? input(s.pitInput) : input }));
@@ -118,79 +157,216 @@ function App() {
   const setVatInput = (input: VatInput | ((prev: VatInput) => VatInput)) =>
     updateSession(s => ({ ...s, vatInput: typeof input === 'function' ? input(s.vatInput) : input }));
 
-  const handleSaveVoucher = (voucher: DividendVoucher) => {
-    updateSession(s => {
-      const exists = s.dividendVouchers.find(v => v.id === voucher.id);
-      return {
-        ...s,
-        dividendVouchers: exists
-          ? s.dividendVouchers.map(v => v.id === voucher.id ? voucher : v)
-          : [...s.dividendVouchers, voucher]
-      };
-    });
-    setActiveView('dividend_vouchers');
-  };
+  const setChecklist = (input: FilingChecklist | ((prev: FilingChecklist) => FilingChecklist)) =>
+    updateSession(s => ({ ...s, checklist: typeof input === 'function' ? input(s.checklist) : input }));
 
-  const handleDeleteVoucher = (id: string) => {
-    if (!confirm('Are you sure you want to delete this voucher?')) return;
-    updateSession(s => ({
-      ...s,
-      dividendVouchers: s.dividendVouchers.filter(v => v.id !== id)
-    }));
-  };
 
-  const handleAddCompany = () => {
+
+  const handleAddCompany = async () => {
     const name = prompt("Enter new company name:");
     if (!name) return;
-    const id = `comp_${Date.now()}`;
-    setSessions(prev => ({
-      ...prev,
-      [id]: {
-        company: { id, name },
-        statementData: null,
-        pitInput: defaultPit,
-        citInput: defaultCit,
-        vatInput: defaultVat,
-        dividendVouchers: []
+
+    try {
+      const { data, error } = await supabase.from('companies').insert([{
+        legal_name: name, // Mapped to correct DB column
+        profile_type: 'business', // Default
+        user_id: user.id // Default works, but explicit is fine too if auth context is correct
+      }]).select().single();
+
+      if (error) throw error;
+
+      if (data) {
+        // Map DB response back to local type if needed
+        const newCompany: Company = {
+          ...data,
+          name: data.legal_name || data.display_name || name
+        };
+
+        setSessions(prev => ({
+          ...prev,
+          [data.id]: {
+            company: newCompany,
+            statementData: null,
+            pitInput: defaultPit,
+            citInput: defaultCit,
+            vatInput: defaultVat,
+            checklist: defaultChecklist,
+          }
+        }));
+        setActiveCompanyId(data.id);
+        setActiveView('dashboard');
       }
-    }));
-    setActiveCompanyId(id);
-    setActiveView('dashboard');
+    } catch (e: any) {
+      console.error('Error adding company:', e);
+      alert('Error creating company: ' + e.message);
+    }
   };
 
-  const handleStatementUpload = (data: { transactions: Transaction[], summary: StatementSummary }) => {
-    // Inject company_id into transactions
-    const taggedTransactions = data.transactions.map(t => ({ ...t, company_id: activeCompanyId }));
-    const taggedData = { ...data, transactions: taggedTransactions };
+  // Fetch transactions from DB
+  const loadTransactions = async (companyId: string) => {
+    const { data, error } = await supabase
+      .from('bank_transactions')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('txn_date', { ascending: true }); // or date if renamed
 
-    updateSession(s => ({
-      ...s,
-      statementData: taggedData,
-      pitInput: {
-        ...s.pitInput,
-        gross_income: data.summary.total_inflow,
-        allowable_deductions: data.summary.total_outflow,
-      },
-      citInput: {
-        ...s.citInput,
-        turnover: data.summary.total_inflow,
-        assessable_profit: Math.max(0, data.summary.net_cash_flow)
-      }
-    }));
+    if (error) {
+      console.error('Error loading transactions:', error);
+      return;
+    }
 
-    setActiveView('transactions');
+    if (data) {
+      const transactions: Transaction[] = data.map((row: any) => ({
+        id: row.id,
+        company_id: row.company_id,
+        date: new Date(row.txn_date || row.date), // Handle mapping
+        description: row.description || row.narration,
+        amount: Number(row.amount),
+        category_name: row.category_name || (Number(row.amount) > 0 ? 'Uncategorized Income' : 'Uncategorized Expense'),
+        tax_tag: row.tax_tag,
+        notes: row.notes,
+        sub_category: row.sub_category,
+        is_business: row.is_business,
+        excluded_from_tax: row.excluded_from_tax,
+        dla_status: row.dla_status || 'none',
+        tax_year_label: row.tax_year_label
+      }));
+
+      // Calc Summary
+      const total_inflow = transactions.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
+      const total_outflow = transactions.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
+      const summary: StatementSummary = {
+        total_inflow,
+        total_outflow,
+        net_cash_flow: total_inflow - total_outflow,
+        transaction_count: transactions.length,
+        period_start: transactions[0]?.date,
+        period_end: transactions[transactions.length - 1]?.date
+      };
+
+      setSessions(prev => ({
+        ...prev,
+        [companyId]: {
+          ...prev[companyId],
+          statementData: { transactions, summary }
+        }
+      }));
+    }
   };
 
-  const handleStatementUpdate = (updatedTxns: Transaction[]) => {
-    // Correctly updating nested state logic
+  // Refetch when active company changes
+  useEffect(() => {
+    if (activeCompanyId && activeCompanyId !== 'default' && activeCompanyId !== 'personal') {
+      // Only fetch for real companies usually, but 'default'/'personal' might be in DB now too?
+      // If 'default' is in DB (we created it there?), fetch it.
+      // Our loadCompanies fetched them all.
+      loadTransactions(activeCompanyId);
+    }
+  }, [activeCompanyId]);
+
+
+  const handleStatementUpload = async (data: { transactions: Transaction[], summary: StatementSummary }) => {
+    try {
+      const rowsToInsert = data.transactions.map(t => ({
+        company_id: activeCompanyId,
+        user_id: user.id,
+        txn_date: t.date.toISOString().split('T')[0], // PG Date
+        description: t.description,
+        amount: t.amount,
+        is_business: true,
+        category_name: t.category_name,
+        tax_year_label: t.date.getFullYear().toString(),
+        dla_status: 'none'
+      }));
+
+      const { error } = await supabase.from('bank_transactions').insert(rowsToInsert);
+      if (error) throw error;
+
+      alert(`Successfully imported ${rowsToInsert.length} transactions!`);
+
+      // Refresh from DB to get generated IDs etc
+      loadTransactions(activeCompanyId);
+      setActiveView('transactions');
+
+    } catch (e: any) {
+      console.error("Upload error:", e);
+      alert("Failed to save transactions: " + e.message);
+    }
+  };
+
+  // Empty State Check (Placed here to access handleAddCompany)
+  if (user && !loading && !activeSession && Object.keys(sessions).length === 0) {
+    return (
+      <Layout
+        activeView="dashboard"
+        onNavigate={setActiveView}
+        activeCompanyId=""
+        companies={[]}
+        onSwitchCompany={setActiveCompanyId}
+        onAddCompany={handleAddCompany}
+        onLogout={handleLogout}
+      >
+        <div style={{ textAlign: 'center', marginTop: '4rem' }}>
+          <h2>Welcome to DEAP</h2>
+          <p style={{ color: '#64748b', marginBottom: '2rem' }}>You don't have any companies yet.</p>
+          <button
+            onClick={handleAddCompany}
+            style={{ padding: '0.75rem 1.5rem', background: '#0f172a', color: 'white', border: 'none', borderRadius: '6px', fontSize: '1rem', cursor: 'pointer' }}
+          >
+            Create Your First Company
+          </button>
+        </div>
+      </Layout>
+    );
+  } else if (user && !activeSession) {
+    if (Object.keys(sessions).length > 0) {
+      // If we have sessions but activeSession is invalid, reset to first
+      // Avoid infinite loop if render is fast, but this is a return
+      setActiveCompanyId(Object.keys(sessions)[0]);
+      return <div>Redirecting...</div>
+    }
+  }
+
+  const handleStatementUpdate = async (updatedTxns: Transaction[]) => {
+    // Optimistic Update
     if (!activeSession.statementData) return;
     const newData = { ...activeSession.statementData, transactions: updatedTxns };
 
-    // Update session
-    const updatedSessions = { ...sessions, [activeCompanyId]: { ...sessions[activeCompanyId], statementData: newData } };
-    setSessions(updatedSessions);
-    // Also update local view if needed (though session usually drives it)
-    setStatementData(newData);
+    setSessions(prev => ({
+      ...prev,
+      [activeCompanyId]: { ...prev[activeCompanyId], statementData: newData }
+    }));
+
+    // Background Persistence
+    try {
+      const rowsToUpsert = updatedTxns.map(t => ({
+        id: t.id,
+        company_id: t.company_id,
+        user_id: user?.id, // Ensure user exists
+        txn_date: t.date.toISOString().split('T')[0],
+        description: t.description,
+        amount: t.amount,
+        category_name: t.category_name,
+        sub_category: t.sub_category,
+        tax_tag: t.tax_tag,
+        notes: t.notes,
+        dla_status: t.dla_status || 'none',
+        is_business: t.is_business,
+        excluded_from_tax: t.excluded_from_tax,
+        tax_year_label: t.tax_year_label,
+        // Preserve category_id if we had it, but mostly we use category_name for now
+        // category_id: t.category_id 
+      }));
+
+      // Use upsert
+      const { error } = await supabase.from('bank_transactions').upsert(rowsToUpsert);
+      if (error) {
+        console.error("Failed to persist changes:", error);
+        // Optionally revert state here if critical
+      }
+    } catch (e) {
+      console.error("Persistence exception:", e);
+    }
   };
 
 
@@ -217,7 +393,7 @@ function App() {
   );
 
   const renderContent = () => {
-    const { statementData, pitInput, citInput, vatInput, dividendVouchers } = activeSession;
+    const { statementData, pitInput, citInput, vatInput, checklist } = activeSession;
 
     switch (activeView) {
       case 'dashboard':
@@ -258,20 +434,18 @@ function App() {
       case 'dividend_vouchers':
         return (
           <DividendVoucherList
-            vouchers={dividendVouchers}
+            companyId={activeCompanyId}
             onCreate={() => { setEditingVoucherId(null); setActiveView('dividend_voucher_form'); }}
             onEdit={(id) => { setEditingVoucherId(id); setActiveView('dividend_voucher_form'); }}
-            onDelete={handleDeleteVoucher}
           />
         );
 
       case 'dividend_voucher_form':
-        const voucherToEdit = editingVoucherId ? dividendVouchers.find(v => v.id === editingVoucherId) : undefined;
         return (
           <DividendVoucherForm
             company={activeSession.company}
-            initialData={voucherToEdit}
-            onSave={handleSaveVoucher}
+            voucherId={editingVoucherId}
+            onSave={() => setActiveView('dividend_vouchers')}
             onCancel={() => setActiveView('dividend_vouchers')}
           />
         );
@@ -296,12 +470,17 @@ function App() {
             pitInput={pitInput}
             citInput={citInput}
             vatInput={vatInput}
+            checklist={checklist}
+            onChecklistChange={setChecklist}
             onNavigate={setActiveView}
           />
         ) : <NoDataFallback />;
 
       case 'settings':
-        return <Settings />;
+        return <Settings
+          company={activeSession.company}
+          onUpdateCompany={(updatedCompany) => updateSession(s => ({ ...s, company: updatedCompany }))}
+        />;
 
       default: return <div>Under Construction</div>;
     }

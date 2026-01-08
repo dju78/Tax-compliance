@@ -70,8 +70,17 @@ export interface Company {
     name: string;
     sector?: string;
     description?: string;
-    reg_number?: string;
+    reg_number?: string; // Legacy field, might map to rc_number
+    rc_number?: string;
     address?: string;
+    tin?: string;
+    email?: string; // Added based on Settings.tsx usage
+    phone?: string;
+
+    // New fields
+    profile_type?: 'individual' | 'business';
+    nin?: string;
+    business_type?: string;
 }
 
 export interface DividendVoucher {
@@ -102,4 +111,11 @@ export interface DividendVoucherLine {
     id: string;
     description: string;
     amount: number;
+}
+
+export interface FilingChecklist {
+    incomeReconciled: boolean;
+    expensesReviewed: boolean;
+    vatReconciled: boolean;
+    payeCredits: boolean;
 }

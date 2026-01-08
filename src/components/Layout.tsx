@@ -101,7 +101,18 @@ export function Layout({
                     <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>System</div>
                     <NavItem view="settings" label="Settings" icon="⚙️" />
 
-                    <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <button
+                            onClick={() => { setHelpOpen(true); setNotificationOpen(false); }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem',
+                                border: 'none', background: 'transparent', color: '#64748b', width: '100%',
+                                borderRadius: '8px', cursor: 'pointer', textAlign: 'left', fontWeight: '500'
+                            }}
+                        >
+                            <span>❓</span>
+                            {sidebarOpen && <span>Help & Support</span>}
+                        </button>
                         <button
                             onClick={onLogout}
                             style={{
@@ -201,13 +212,7 @@ export function Layout({
                         </div>
 
                         <div style={{ position: 'relative' }}>
-                            <button
-                                onClick={() => { setHelpOpen(!helpOpen); setNotificationOpen(false); }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
-                                title="Help"
-                            >
-                                ❓
-                            </button>
+                            {/* Help Button Moved to Sidebar */}
                             {helpOpen && (
                                 <div style={{
                                     position: 'fixed', top: '0', right: '0', height: '100vh', width: '400px',

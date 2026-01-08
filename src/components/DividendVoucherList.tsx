@@ -1,13 +1,62 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 import type { DividendVoucher } from '../engine/types';
 
 interface DividendVoucherListProps {
-    vouchers: DividendVoucher[];
+    companyId: string;
     onCreate: () => void;
     onEdit: (id: string) => void;
-    onDelete: (id: string) => void;
 }
 
-export function DividendVoucherList({ vouchers, onCreate, onEdit, onDelete }: DividendVoucherListProps) {
+export function DividendVoucherList({ companyId, onCreate, onEdit }: DividendVoucherListProps) {
+    const [vouchers, setVouchers] = useState<DividendVoucher[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchVouchers();
+    }, [companyId]);
+
+    const fetchVouchers = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('dividend_vouchers')
+            .select('*')
+            .eq('company_id', companyId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching vouchers:', error);
+        } else {
+            // Parse dates and match type
+            const parsed = (data || []).map((d: any) => ({
+                ...d,
+                date_of_payment: new Date(d.date_of_payment),
+                // lines is already json (array)
+            })) as DividendVoucher[];
+            setVouchers(parsed);
+        }
+        setLoading(false);
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this voucher? This cannot be undone.')) return;
+
+        const { error } = await supabase
+            .from('dividend_vouchers')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            alert('Error deleting voucher: ' + error.message);
+        } else {
+            setVouchers(prev => prev.filter(v => v.id !== id));
+        }
+    };
+
+    if (loading) {
+        return <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Loading vouchers...</div>;
+    }
+
     return (
         <div style={{ padding: '0 2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -59,7 +108,7 @@ export function DividendVoucherList({ vouchers, onCreate, onEdit, onDelete }: Di
                                 <tr key={v.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                     <td style={{ padding: '0.75rem 1rem', fontWeight: '500', color: '#1e293b' }}>{v.voucher_number}</td>
                                     <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>{v.shareholder_name}</td>
-                                    <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>{new Date(v.date_of_payment).toLocaleDateString()}</td>
+                                    <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>{v.date_of_payment.toLocaleDateString()}</td>
                                     <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>{v.tax_year_label}</td>
                                     <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600', color: '#1e293b' }}>
                                         {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(v.gross_dividend)}
@@ -85,7 +134,7 @@ export function DividendVoucherList({ vouchers, onCreate, onEdit, onDelete }: Di
                                                 Edit
                                             </button>
                                             <button
-                                                onClick={() => onDelete(v.id)}
+                                                onClick={() => handleDelete(v.id)}
                                                 style={{ border: '1px solid #fee2e2', background: '#fff1f2', padding: '0.3rem 0.6rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', color: '#991b1b' }}
                                             >
                                                 Delete
