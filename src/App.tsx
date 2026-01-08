@@ -23,7 +23,7 @@ import { type VatInput } from './engine/vat';
 
 import { DividendVoucherList } from './components/DividendVoucherList';
 import { DividendVoucherForm } from './components/DividendVoucherForm';
-import type { DividendVoucher } from './engine/types';
+
 
 // Multi-Company State
 function App() {
