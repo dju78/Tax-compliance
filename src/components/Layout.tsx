@@ -9,6 +9,7 @@ interface LayoutProps {
     companies?: Company[];
     onSwitchCompany?: (id: string) => void;
     onAddCompany?: () => void;
+    onLogout?: () => void;
 }
 
 export function Layout({
@@ -18,9 +19,12 @@ export function Layout({
     activeCompanyId,
     companies = [],
     onSwitchCompany,
-    onAddCompany
+    onAddCompany,
+    onLogout
 }: LayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [notificationOpen, setNotificationOpen] = useState(false);
+    const [helpOpen, setHelpOpen] = useState(false);
 
     const NavItem = ({ view, label, icon }: { view: string, label: string, icon: string }) => (
         <button
@@ -84,6 +88,20 @@ export function Layout({
 
                     <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>System</div>
                     <NavItem view="settings" label="Settings" icon="⚙️" />
+
+                    <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                        <button
+                            onClick={onLogout}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem',
+                                border: 'none', background: 'transparent', color: '#ef4444', width: '100%',
+                                borderRadius: '8px', cursor: 'pointer', textAlign: 'left', fontWeight: '500'
+                            }}
+                        >
+                            <span>🚪</span>
+                            {sidebarOpen && <span>Sign Out</span>}
+                        </button>
+                    </div>
                 </nav>
             </aside>
 
@@ -124,9 +142,84 @@ export function Layout({
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }} title="Notifications">🔔</button>
-                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }} title="Help">❓</button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', position: 'relative' }}>
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => { setNotificationOpen(!notificationOpen); setHelpOpen(false); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', position: 'relative' }}
+                                title="Notifications"
+                            >
+                                🔔
+                                <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', background: 'red', borderRadius: '50%' }}></span>
+                            </button>
+                            {notificationOpen && (
+                                <div style={{
+                                    position: 'absolute', top: '150%', right: '0', width: '300px',
+                                    background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50
+                                }}>
+                                    <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', fontWeight: 'bold', color: '#334155' }}>Notifications</div>
+                                    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: '#f8fafc' }}>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Bank upload completed</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>158 transactions imported</div>
+                                        </div>
+                                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Items need review</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>5 items need review (VAT/WHT rules)</div>
+                                        </div>
+                                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Report generated successfully</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Monthly Summary ready.</div>
+                                        </div>
+                                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Tax rules updated</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Rules updated for selected year.</div>
+                                        </div>
+                                        <div style={{ padding: '0.75rem 1rem', cursor: 'pointer' }}>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Reminder</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>VAT filing due in 3 days</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ padding: '0.75rem', textAlign: 'center', borderTop: '1px solid #e2e8f0', color: '#0284c7', fontSize: '0.85rem', cursor: 'pointer' }}>
+                                        Mark all as read
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => { setHelpOpen(!helpOpen); setNotificationOpen(false); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
+                                title="Help"
+                            >
+                                ❓
+                            </button>
+                            {helpOpen && (
+                                <div style={{
+                                    position: 'absolute', top: '150%', right: '0', width: '250px',
+                                    background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50
+                                }}>
+                                    <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', fontWeight: 'bold', color: '#334155' }}>Help & Support</div>
+                                    <div style={{ padding: '0.5rem 0' }}>
+                                        <div style={{ padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            📚 Documentation
+                                        </div>
+                                        <div style={{ padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            🎥 Video Tutorials
+                                        </div>
+                                        <div style={{ padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            💬 Contact Support
+                                        </div>
+                                        <div style={{ padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            ℹ️ About DEAP v1.0
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </header>
 

@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from './supabase';
+import { Auth } from './components/Auth';
 import type { Transaction, StatementSummary, Company } from './engine/types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
@@ -25,6 +27,8 @@ import type { DividendVoucher } from './engine/types';
 
 // Multi-Company State
 function App() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
   const [editingVoucherId, setEditingVoucherId] = useState<string | null>(null);
 
@@ -60,6 +64,37 @@ function App() {
       dividendVouchers: []
     }
   });
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f1f5f9' }}>
+        <div style={{ width: '40px', height: '40px', border: '4px solid #cbd5e1', borderTopColor: '#0f172a', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth />;
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const activeSession = sessions[activeCompanyId];
 
@@ -280,6 +315,7 @@ function App() {
       companies={Object.values(sessions).map(s => s.company)}
       onSwitchCompany={setActiveCompanyId}
       onAddCompany={handleAddCompany}
+      onLogout={handleLogout}
     >
       {renderContent()}
     </Layout>
