@@ -202,9 +202,9 @@ export const HELP_CONTENT: HelpSection[] = [
                 title: 'Contact Us',
                 keywords: ['contact', 'email', 'whatsapp', 'bug'],
                 body: `
-                    <p><strong>WhatsApp:</strong> <a href="#" style="color: #16a34a">Chat with Support</a></p>
-                    <p><strong>Email:</strong> support@deap.ng (Replies within 24h)</p>
-                    <p><strong>Report Bug:</strong> Send a screenshot and description to specific bug email.</p>
+                    <p><strong>WhatsApp:</strong> <a href="https://wa.me/2348068421761" target="_blank" style="color: #16a34a">Chat with Support (+234 806 842 1761)</a></p>
+                    <p><strong>Email:</strong> <a href="mailto:dju78@yahoo.com" style="color: #0284c7">dju78@yahoo.com</a> (Replies within 24h)</p>
+                    <p><strong>Report Bug:</strong> Send a screenshot and description to support.</p>
                 `
             }
         ]
