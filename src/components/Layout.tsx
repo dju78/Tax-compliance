@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Company } from '../engine/types';
+import { HELP_CONTENT } from '../data/helpContent';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -25,6 +26,17 @@ export function Layout({
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [notificationOpen, setNotificationOpen] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedHelpSection, setSelectedHelpSection] = useState<string | null>(null);
+
+    // Filter Help Content
+    const filteredHelp = HELP_CONTENT.map(section => ({
+        ...section,
+        content: section.content.filter(article =>
+            article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            article.keywords.some(k => k.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
+    })).filter(section => section.content.length > 0);
 
     const NavItem = ({ view, label, icon }: { view: string, label: string, icon: string }) => (
         <button
@@ -198,23 +210,120 @@ export function Layout({
                             </button>
                             {helpOpen && (
                                 <div style={{
-                                    position: 'absolute', top: '150%', right: '0', width: '250px',
-                                    background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px',
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50
+                                    position: 'fixed', top: '0', right: '0', height: '100vh', width: '400px',
+                                    background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 15px rgba(0,0,0,0.1)',
+                                    zIndex: 100, display: 'flex', flexDirection: 'column'
                                 }}>
-                                    <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', fontWeight: 'bold', color: '#334155' }}>Help & Support</div>
-                                    <div style={{ padding: '0.5rem 0' }}>
-                                        <div style={{ padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            📚 Documentation
-                                        </div>
-                                        <div style={{ padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            🎥 Video Tutorials
-                                        </div>
-                                        <div style={{ padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            💬 Contact Support
-                                        </div>
-                                        <div style={{ padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            ℹ️ About DEAP v1.0
+                                    {/* Drawer Header */}
+                                    <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+                                        <h3 style={{ fontWeight: 'bold', color: '#1e293b', margin: 0 }}>Help & Support</h3>
+                                        <button onClick={() => setHelpOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}>✕</button>
+                                    </div>
+
+                                    {/* Search Bar */}
+                                    <div style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9' }}>
+                                        <input
+                                            type="text"
+                                            placeholder="Search help (e.g. VAT, Upload)..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                                        />
+                                    </div>
+
+                                    {/* Drawer Content */}
+                                    <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+                                        {searchTerm ? (
+                                            // Search Results
+                                            <div>
+                                                {filteredHelp.length > 0 ? filteredHelp.map(section => (
+                                                    <div key={section.id} style={{ marginBottom: '1.5rem' }}>
+                                                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase' }}>{section.title}</div>
+                                                        {section.content.map((article, idx) => (
+                                                            <div key={idx} style={{ marginBottom: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#0f172a' }}>{article.title}</div>
+                                                                <div
+                                                                    style={{ fontSize: '0.9rem', color: '#334155', lineHeight: '1.5' }}
+                                                                    dangerouslySetInnerHTML={{ __html: article.body as string }}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )) : (
+                                                    <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No results found for "{searchTerm}"</div>
+                                                )}
+                                            </div>
+                                        ) : selectedHelpSection ? (
+                                            // Selected Section View
+                                            <div>
+                                                <button
+                                                    onClick={() => setSelectedHelpSection(null)}
+                                                    style={{ background: 'none', border: 'none', color: '#0284c7', cursor: 'pointer', marginBottom: '1rem', fontWeight: '500' }}
+                                                >
+                                                    ← Back to Topics
+                                                </button>
+                                                {HELP_CONTENT.filter(s => s.id === selectedHelpSection).map(section => (
+                                                    <div key={section.id}>
+                                                        <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <span>{section.icon}</span> {section.title}
+                                                        </h2>
+                                                        {section.content.map((article, idx) => (
+                                                            <div key={idx} style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                                <h4 style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#334155' }}>{article.title}</h4>
+                                                                {article.body === 'checklist' ? (
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                                        {['Create business profile', 'Pick tax type', 'Select period', 'Add transactions', 'Generate report'].map(item => (
+                                                                            <label key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                                                                <input type="checkbox" /> {item}
+                                                                            </label>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div
+                                                                        style={{ fontSize: '0.9rem', color: '#475569', lineHeight: '1.6' }}
+                                                                        dangerouslySetInnerHTML={{ __html: article.body as string }}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            // Topics List
+                                            <div style={{ display: 'grid', gap: '0.75rem' }}>
+                                                {HELP_CONTENT.map(section => (
+                                                    <button
+                                                        key={section.id}
+                                                        onClick={() => setSelectedHelpSection(section.id)}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', gap: '1rem',
+                                                            padding: '1rem', width: '100%', textAlign: 'left',
+                                                            background: 'white', border: '1px solid #e2e8f0',
+                                                            borderRadius: '8px', cursor: 'pointer',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onMouseOver={(e) => e.currentTarget.style.borderColor = '#94a3b8'}
+                                                        onMouseOut={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
+                                                    >
+                                                        <span style={{ fontSize: '1.5rem' }}>{section.icon}</span>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>{section.title}</div>
+                                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{section.content.length} articles</div>
+                                                        </div>
+                                                        <span style={{ color: '#cbd5e1' }}>›</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Drawer Footer */}
+                                    <div style={{ padding: '1rem', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem', fontWeight: 'bold' }}>Need more help?</div>
+                                        <div style={{ display: 'flex', gap: '1rem' }}>
+                                            <a href="#" style={{ color: '#16a34a', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' }}>WhatsApp Support</a>
+                                            <a href="#" style={{ color: '#0284c7', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' }}>Email Us</a>
                                         </div>
                                     </div>
                                 </div>
