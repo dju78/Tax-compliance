@@ -456,7 +456,6 @@ function App() {
 
   const renderContent = () => {
     const { statementData, pitInput, citInput, vatInput, checklist } = activeSession;
-    console.log("Render Content:", { activeView, activeCompanyId, hasData: !!statementData });
 
     switch (activeView) {
       case 'dashboard':
@@ -545,7 +544,7 @@ function App() {
           onUpdateCompany={(updatedCompany) => updateSession(s => ({ ...s, company: updatedCompany }))}
         />;
 
-      default: return <div>Under Construction (View: {activeView})</div>;
+      default: return <div>Under Construction</div>;
     }
   };
 
