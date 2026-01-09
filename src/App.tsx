@@ -127,7 +127,7 @@ function App() {
   const handleAddCompany = () => {
     const name = prompt("Enter new company name:");
     if (!name) return;
-    const id = `comp_${Date.now()}`;
+    const id = crypto.randomUUID();
     setSessions(prev => ({
       ...prev,
       [id]: {

@@ -73,9 +73,9 @@ export function generatePDFReport(data: ReportData) {
         // For simplicity, just listing available figures.
 
         const summaryBody = [];
-        if (data.pit) summaryBody.push(['PIT (Personal Income Tax)', `Gross: ₦${data.pit.gross_income.toLocaleString()}`]);
-        if (data.cit) summaryBody.push(['CIT (Company Income Tax)', `Profit: ₦${data.cit.assessable_profit.toLocaleString()}`]);
-        if (data.vat) summaryBody.push(['VAT (Value Added Tax)', `Net: ₦${(data.vat.output_vat - data.vat.input_vat).toLocaleString()}`]);
+        if (data.pit) summaryBody.push(['PIT (Personal Income Tax)', `Gross: N${data.pit.gross_income.toLocaleString()}`]);
+        if (data.cit) summaryBody.push(['CIT (Company Income Tax)', `Profit: N${data.cit.assessable_profit.toLocaleString()}`]);
+        if (data.vat) summaryBody.push(['VAT (Value Added Tax)', `Net: N${(data.vat.output_vat - data.vat.input_vat).toLocaleString()}`]);
 
         autoTable(doc, {
             startY: finalY,
@@ -95,11 +95,11 @@ export function generatePDFReport(data: ReportData) {
                 startY: finalY,
                 head: [['Item', 'Value']],
                 body: [
-                    ['Gross Income', `₦${res.gross_income.toLocaleString()}`],
-                    ['Total Reliefs (Inc. Rent/CRA)', `(₦${res.reliefs.toLocaleString()})`],
-                    ['Taxable Income', `₦${res.taxable_income.toLocaleString()}`],
+                    ['Gross Income', `N${res.gross_income.toLocaleString()}`],
+                    ['Total Reliefs (Inc. Rent/CRA)', `(N${res.reliefs.toLocaleString()})`],
+                    ['Taxable Income', `N${res.taxable_income.toLocaleString()}`],
                     ['Effective Tax Rate', `${(res.effective_rate * 100).toFixed(2)}%`],
-                    ['Total PIT Payable', `₦${res.tax_payable.toLocaleString()}`]
+                    ['Total PIT Payable', `N${res.tax_payable.toLocaleString()}`]
                 ],
                 theme: 'striped',
                 headStyles: { fillColor: [46, 125, 50] } // Green for PIT
@@ -111,11 +111,11 @@ export function generatePDFReport(data: ReportData) {
                 head: [['Item', 'Value']],
                 body: [
                     ['Assessed Category', `${res.category} Company`],
-                    ['Assessable Profit', `₦${res.assessable_profit.toLocaleString()}`],
+                    ['Assessable Profit', `N${res.assessable_profit.toLocaleString()}`],
                     ['CIT Rate', `${res.tax_rate * 100}%`],
-                    ['CIT Payable', `₦${res.tax_payable.toLocaleString()}`],
-                    ['Development Levy (4%)', `₦${res.development_levy.toLocaleString()}`],
-                    ['Total Tax Liability', `₦${(res.tax_payable + res.development_levy).toLocaleString()}`]
+                    ['CIT Payable', `N${res.tax_payable.toLocaleString()}`],
+                    ['Development Levy (4%)', `N${res.development_levy.toLocaleString()}`],
+                    ['Total Tax Liability', `N${(res.tax_payable + res.development_levy).toLocaleString()}`]
                 ],
                 theme: 'striped',
                 headStyles: { fillColor: [21, 101, 192] } // Blue for CIT

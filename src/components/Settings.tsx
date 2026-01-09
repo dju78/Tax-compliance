@@ -168,7 +168,8 @@ function CompanyProfileSettings({ company, onSave, canEdit }: { company: Company
         setSaving(true);
         try {
             if (formData.id !== 'personal' && formData.id !== 'default') {
-                const { error } = await supabase.from('companies').update({
+                const { error } = await supabase.from('companies').upsert({
+                    id: formData.id,
                     legal_name: formData.name, // Mapped to correct DB column
                     address: formData.address,
                     tin: formData.tin,
@@ -177,7 +178,7 @@ function CompanyProfileSettings({ company, onSave, canEdit }: { company: Company
                     profile_type: formData.profile_type,
                     business_type: formData.business_type,
                     email: formData.email
-                }).eq('id', formData.id);
+                });
 
                 if (error) {
                     if (error.code === '42501') throw new Error("Permission Denied: You do not have rights to update this profile.");
