@@ -28,7 +28,7 @@ const PIT_BANDS = [
   { threshold: Infinity, rate: 0.25 },  // Above 50m @ 25%
 ];
 
-export function calculateRelief(grossIncome: number, actualRent: number): number {
+export function calculateRelief(_grossIncome: number, actualRent: number): number {
   // New Rent Relief: Lower of ₦500,000 or 20% of annual rent paid
   // Wait, prompt said: "lower of ₦500,000 or 20% of annual rent paid"
   // Previous logic was 20% of gross income.
