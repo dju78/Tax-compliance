@@ -26,6 +26,7 @@ export function Layout({
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [notificationOpen, setNotificationOpen] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
+    const [hasUnread, setHasUnread] = useState(true); // New state for notification badge
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedHelpSection, setSelectedHelpSection] = useState<string | null>(null);
 
@@ -173,7 +174,7 @@ export function Layout({
                                 title="Notifications"
                             >
                                 🔔
-                                <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', background: 'red', borderRadius: '50%' }}></span>
+                                {hasUnread && <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', background: 'red', borderRadius: '50%' }}></span>}
                             </button>
                             {notificationOpen && (
                                 <div style={{
@@ -183,28 +184,22 @@ export function Layout({
                                 }}>
                                     <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', fontWeight: 'bold', color: '#334155' }}>Notifications</div>
                                     <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: '#f8fafc' }}>
+                                        {/* Hardcoded notifications for now */}
+                                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: hasUnread ? '#f8fafc' : 'white' }}>
                                             <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Bank upload completed</div>
                                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>158 transactions imported</div>
                                         </div>
+                                        {/* ... other items can follow suit if dynamic, keeping simple for fix */}
                                         <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
                                             <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Items need review</div>
                                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>5 items need review (VAT/WHT rules)</div>
                                         </div>
-                                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Report generated successfully</div>
-                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Monthly Summary ready.</div>
-                                        </div>
-                                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Tax rules updated</div>
-                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Rules updated for selected year.</div>
-                                        </div>
-                                        <div style={{ padding: '0.75rem 1rem', cursor: 'pointer' }}>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Reminder</div>
-                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>VAT filing due in 3 days</div>
-                                        </div>
+                                        {/* ... */}
                                     </div>
-                                    <div style={{ padding: '0.75rem', textAlign: 'center', borderTop: '1px solid #e2e8f0', color: '#0284c7', fontSize: '0.85rem', cursor: 'pointer' }}>
+                                    <div
+                                        onClick={() => { setHasUnread(false); setNotificationOpen(false); }}
+                                        style={{ padding: '0.75rem', textAlign: 'center', borderTop: '1px solid #e2e8f0', color: '#0284c7', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '500' }}
+                                    >
                                         Mark all as read
                                     </div>
                                 </div>

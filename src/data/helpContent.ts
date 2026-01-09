@@ -108,6 +108,78 @@ export const HELP_CONTENT: HelpSection[] = [
                         <strong>Disclaimer:</strong> This content is provided for educational purposes only. It does not constitute legal or tax advice. Users should consult official NRS guidance or a licensed tax professional where necessary.
                     </div>
                 `
+            },
+            {
+                title: 'Progressive Tax Calculations (2025/2026 Reforms)',
+                keywords: ['progressive', 'pit', 'cit', 'vat', 'wht', 'cgt', 'rates', 'bands', 'reform', '2025', '2026'],
+                body: `
+                    <div style="background: #eff6ff; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <strong>Note:</strong> These rates reflect the <strong>2025 Tax Reforms</strong> (Effective Jan 1, 2026).
+                    </div>
+
+                    <h3>1. Personal Income Tax (PIT) - New Progressive Rates</h3>
+                    <p><strong>Exemption:</strong> Annual income of ₦800,000 or less is Tax Exempt (0%).</p>
+                    <table style="width:100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: #f1f5f9; text-align: left;">
+                                <th style="padding: 8px; border: 1px solid #e2e8f0;">Taxable Income Range (Annual)</th>
+                                <th style="padding: 8px; border: 1px solid #e2e8f0;">Rate</th>
+                                <th style="padding: 8px; border: 1px solid #e2e8f0;">Cumulative Tax</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">First ₦800,000</td><td style="padding: 8px; border: 1px solid #e2e8f0;">0%</td><td style="padding: 8px; border: 1px solid #e2e8f0;">₦0</td></tr>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Next ₦2,200,000 (800k - 3m)</td><td style="padding: 8px; border: 1px solid #e2e8f0;">15%</td><td style="padding: 8px; border: 1px solid #e2e8f0;">₦330,000</td></tr>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Next ₦9,000,000 (3m - 12m)</td><td style="padding: 8px; border: 1px solid #e2e8f0;">18%</td><td style="padding: 8px; border: 1px solid #e2e8f0;">₦1,950,000</td></tr>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Next ₦13,000,000 (12m - 25m)</td><td style="padding: 8px; border: 1px solid #e2e8f0;">21%</td><td style="padding: 8px; border: 1px solid #e2e8f0;">₦4,680,000</td></tr>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Next ₦25,000,000 (25m - 50m)</td><td style="padding: 8px; border: 1px solid #e2e8f0;">23%</td><td style="padding: 8px; border: 1px solid #e2e8f0;">₦10,430,000</td></tr>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Above ₦50,000,000</td><td style="padding: 8px; border: 1px solid #e2e8f0;">25%</td><td style="padding: 8px; border: 1px solid #e2e8f0;">Variable</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>2. Company Income Tax (CIT) - Revised Structure</h3>
+                    <table style="width:100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: #f1f5f9; text-align: left;">
+                                <th style="padding: 8px; border: 1px solid #e2e8f0;">Category</th>
+                                <th style="padding: 8px; border: 1px solid #e2e8f0;">Turnover</th>
+                                <th style="padding: 8px; border: 1px solid #e2e8f0;">Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Small</td><td style="padding: 8px; border: 1px solid #e2e8f0;">≤ ₦100m</td><td style="padding: 8px; border: 1px solid #e2e8f0;">0% (Exempt)</td></tr>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Medium/Large</td><td style="padding: 8px; border: 1px solid #e2e8f0;">> ₦100m</td><td style="padding: 8px; border: 1px solid #e2e8f0;">30% + 4% Dev. Levy</td></tr>
+                        </tbody>
+                    </table>
+                    <p><em>Note: Large companies (>₦50bn) may be subject to a 15% Minimum Effective Tax Rate.</em></p>
+
+                    <h3>3. Value Added Tax (VAT) - Flat Rate</h3>
+                    <p><strong>Rate:</strong> 7.5%</p>
+                    <p><strong>Small Company Exemption:</strong> Businesses with turnover < ₦100m are exempt from charging VAT.</p>
+
+                    <h3>4. Withholding Tax (WHT) - Flat Rates</h3>
+                    <table style="width:100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.9rem;">
+                         <thead>
+                            <tr style="background: #f1f5f9; text-align: left;">
+                                <th style="padding: 8px; border: 1px solid #e2e8f0;">Type</th>
+                                <th style="padding: 8px; border: 1px solid #e2e8f0;">Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Dividends, Interest, Rent, Royalties</td><td style="padding: 8px; border: 1px solid #e2e8f0;">10%</td></tr>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Directors' Fees</td><td style="padding: 8px; border: 1px solid #e2e8f0;">10%</td></tr>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Professional/Technical/Consultancy</td><td style="padding: 8px; border: 1px solid #e2e8f0;">5%</td></tr>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;">Construction/Agency/Commission</td><td style="padding: 8px; border: 1px solid #e2e8f0;">5%</td></tr>
+                            <tr><td style="padding: 8px; border: 1px solid #e2e8f0;"><strong>Sales of Goods</strong> (New)</td><td style="padding: 8px; border: 1px solid #e2e8f0;"><strong>2%</strong></td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>5. Capital Gains Tax (CGT)</h3>
+                    <ul>
+                        <li><strong>Companies:</strong> 30% (Small companies 0%)</li>
+                        <li><strong>Individuals:</strong> Extension of PIT Progressive Rates (up to 25%)</li>
+                    </ul>
+                `
             }
         ]
     },
