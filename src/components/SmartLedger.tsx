@@ -68,6 +68,10 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
         }
     };
 
+
+    // Preview Modal
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
     // Filtering
     const filteredTxns = transactions.filter(t =>
         t.description.toLowerCase().includes(filter.toLowerCase()) ||
@@ -143,7 +147,17 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                             return (
                                 <tr key={t.id} style={{ background: isSelected ? '#f0f9ff' : 'white', borderBottom: '1px solid #f1f5f9' }}>
                                     <td style={{ padding: '0.75rem' }}><input type="checkbox" checked={isSelected} onChange={() => toggleSelect(t.id)} /></td>
-                                    <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }}>{t.date.toLocaleDateString()}</td>
+                                    <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }}>
+                                        {t.date.toLocaleDateString()}
+                                        {t.preview_url && (
+                                            <button
+                                                onClick={() => setPreviewUrl(t.preview_url!)}
+                                                style={{ display: 'block', marginTop: '0.2rem', fontSize: '0.7rem', color: '#0284c7', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                                            >
+                                                View Doc 📄
+                                            </button>
+                                        )}
+                                    </td>
                                     <td style={{ padding: '0.75rem', maxWidth: '300px' }}>
                                         {t.description}
                                         {t.excluded_from_tax && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', background: '#fee2e2', color: '#dc2626', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>EXCLUDED</span>}
@@ -167,6 +181,7 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                                             <option value="Consulting">Consulting</option>
                                             <option value="Rent">Rent</option>
                                             <option value="Salaries">Salaries</option>
+                                            <option value="Store Supplies">Store Supplies</option>
                                             <option value="Utilities">Utilities</option>
                                             <option value="Bank Charges">Bank Charges</option>
                                         </select>
@@ -226,6 +241,21 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                     </tbody>
                 </table>
             </div>
+
+            {/* Preview Modal */}
+            {previewUrl && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+                    <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', width: '90%', height: '90%', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0 }}>Document Preview</h3>
+                            <button onClick={() => setPreviewUrl(null)} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+                        </div>
+                        <div style={{ flex: 1, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                            <iframe src={previewUrl} style={{ width: '100%', height: '100%', border: 'none' }} title="Document Preview" />
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

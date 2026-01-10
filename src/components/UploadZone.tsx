@@ -64,6 +64,8 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
             reader.readAsArrayBuffer(f);
         } else if (name.endsWith('.pdf') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png')) {
             // Document Scan - Create Placeholder
+            const previewUrl = URL.createObjectURL(f);
+
             const placeholder: Transaction = {
                 id: `doc_${Date.now()}`,
                 company_id: 'default',
@@ -75,6 +77,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                 tax_year_label: new Date().getFullYear().toString(),
                 category_name: 'Uncategorized Expense',
                 source_type: documentType,
+                preview_url: previewUrl,
                 notes: 'Manual entry required from source document'
             };
 
