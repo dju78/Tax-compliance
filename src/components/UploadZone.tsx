@@ -12,6 +12,8 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
     const [headers, setHeaders] = useState<string[]>([]);
     const [rawRows, setRawRows] = useState<any[][]>([]);
 
+    const [documentType, setDocumentType] = useState<'BANK_STATEMENT' | 'RECEIPT' | 'INVOICE' | 'OTHER'>('BANK_STATEMENT');
+
     const [mapping, setMapping] = useState({
         date: '',
         description: '',
@@ -95,7 +97,8 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                     is_business: true,
                     dla_status: 'none',
                     tax_year_label: dateObj.getFullYear().toString(),
-                    category_name: amount > 0 ? 'Uncategorized Income' : 'Uncategorized Expense'
+                    category_name: amount > 0 ? 'Uncategorized Income' : 'Uncategorized Expense',
+                    source_type: documentType
                 });
             }
         });
@@ -127,6 +130,21 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
 
     return (
         <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', border: '2px dashed #e2e8f0', textAlign: 'center' }}>
+
+            <div style={{ marginBottom: '1.5rem', textAlign: 'left', maxWidth: '300px', margin: '0 auto 1.5rem auto' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Document Type</label>
+                <select
+                    value={documentType}
+                    onChange={(e) => setDocumentType(e.target.value as any)}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                >
+                    <option value="BANK_STATEMENT">Bank Statement</option>
+                    <option value="RECEIPT">Receipt</option>
+                    <option value="INVOICE">Invoice</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </div>
+
             <div
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
@@ -134,7 +152,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                 style={{ background: isDragging ? '#f0f9ff' : 'transparent', padding: '2rem', transition: 'background 0.2s' }}
             >
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📂</div>
-                <h3 style={{ color: '#334155', marginBottom: '0.5rem' }}>Drag & drop your bank statement here</h3>
+                <h3 style={{ color: '#334155', marginBottom: '0.5rem' }}>Drag & drop your {documentType.replace('_', ' ').toLowerCase()} here</h3>
                 <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Supports CSV and Excel (XLSX) files</p>
 
                 <label style={{
@@ -145,7 +163,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                     cursor: 'pointer',
                     fontWeight: '600'
                 }}>
-                    Upload Bank Statement
+                    Upload File
                     <input type="file" hidden accept=".csv, .xlsx, .xls" onChange={handleFileSelect} />
                 </label>
             </div>

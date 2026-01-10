@@ -23,6 +23,7 @@ import { type VatInput } from './engine/vat';
 
 import { DividendVoucherList } from './components/DividendVoucherList';
 import { DividendVoucherForm } from './components/DividendVoucherForm';
+import { ExpenseChecklist } from './components/ExpenseChecklist';
 
 
 // Multi-Company State
@@ -290,6 +291,9 @@ function App() {
           company={activeSession.company}
           onUpdateCompany={(updatedCompany) => updateSession(s => ({ ...s, company: updatedCompany }))}
         />;
+
+      case 'expense_checklist':
+        return <ExpenseChecklist />;
 
       default: return <div>Under Construction</div>;
     }

@@ -130,6 +130,7 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                             <th style={{ padding: '0.75rem', borderBottom: '2px solid #e2e8f0' }}>Description</th>
                             <th style={{ padding: '0.75rem', borderBottom: '2px solid #e2e8f0', textAlign: 'right' }}>Money In</th>
                             <th style={{ padding: '0.75rem', borderBottom: '2px solid #e2e8f0', textAlign: 'right' }}>Money Out</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '2px solid #e2e8f0' }}>Source</th>
                             <th style={{ padding: '0.75rem', borderBottom: '2px solid #e2e8f0', width: '180px' }}>Category</th>
                             <th style={{ padding: '0.75rem', borderBottom: '2px solid #e2e8f0', width: '150px' }}>Sub-category</th>
                             <th style={{ padding: '0.75rem', borderBottom: '2px solid #e2e8f0', width: '120px' }}>Tax Tag</th>
@@ -149,6 +150,9 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                                     </td>
                                     <td style={{ padding: '0.75rem', textAlign: 'right', color: '#16a34a' }}>{t.amount > 0 ? `₦${t.amount.toLocaleString()}` : '-'}</td>
                                     <td style={{ padding: '0.75rem', textAlign: 'right', color: '#dc2626' }}>{t.amount < 0 ? `₦${Math.abs(t.amount).toLocaleString()}` : '-'}</td>
+                                    <td style={{ padding: '0.75rem', color: '#64748b', fontSize: '0.75rem', textTransform: 'capitalize' }}>
+                                        {t.source_type ? t.source_type.replace('_', ' ').toLowerCase() : '-'}
+                                    </td>
 
                                     {/* Category Edit */}
                                     <td style={{ padding: '0.5rem' }}>

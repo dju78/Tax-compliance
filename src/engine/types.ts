@@ -30,6 +30,7 @@ export interface Transaction {
     sub_category?: string;
     tax_tag?: 'VAT' | 'WHT' | 'Non-deductible' | 'Owner Loan' | 'None';
     notes?: string;
+    source_type?: 'BANK_STATEMENT' | 'RECEIPT' | 'INVOICE' | 'OTHER'; // Added for upload source tracking
 }
 
 export interface Owner {
