@@ -148,7 +148,15 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                                 <tr key={t.id} style={{ background: isSelected ? '#f0f9ff' : 'white', borderBottom: '1px solid #f1f5f9' }}>
                                     <td style={{ padding: '0.75rem' }}><input type="checkbox" checked={isSelected} onChange={() => toggleSelect(t.id)} /></td>
                                     <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }}>
-                                        {t.date.toLocaleDateString()}
+                                        <input
+                                            type="date"
+                                            value={t.date.toISOString().split('T')[0]}
+                                            onChange={(e) => {
+                                                const d = new Date(e.target.value);
+                                                if (!isNaN(d.getTime())) handleRowUpdate(t.id, 'date', d);
+                                            }}
+                                            style={{ border: '1px solid transparent', background: 'transparent', fontFamily: 'inherit', color: 'inherit', width: '130px', cursor: 'pointer' }}
+                                        />
                                         {t.preview_url && (
                                             <button
                                                 onClick={() => setPreviewUrl(t.preview_url!)}
@@ -159,11 +167,40 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                                         )}
                                     </td>
                                     <td style={{ padding: '0.75rem', maxWidth: '300px' }}>
-                                        {t.description}
+                                        <input
+                                            type="text"
+                                            value={t.description}
+                                            onChange={(e) => handleRowUpdate(t.id, 'description', e.target.value)}
+                                            style={{ width: '100%', border: '1px solid transparent', background: 'transparent', fontFamily: 'inherit', color: 'inherit' }}
+                                        />
                                         {t.excluded_from_tax && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', background: '#fee2e2', color: '#dc2626', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>EXCLUDED</span>}
                                     </td>
-                                    <td style={{ padding: '0.75rem', textAlign: 'right', color: '#16a34a' }}>{t.amount > 0 ? `₦${t.amount.toLocaleString()}` : '-'}</td>
-                                    <td style={{ padding: '0.75rem', textAlign: 'right', color: '#dc2626' }}>{t.amount < 0 ? `₦${Math.abs(t.amount).toLocaleString()}` : '-'}</td>
+                                    <td style={{ padding: '0.75rem', textAlign: 'right', color: '#16a34a' }}>
+                                        <input
+                                            type="number"
+                                            value={t.amount > 0 ? t.amount : ''}
+                                            placeholder="-"
+                                            onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                if (!isNaN(val)) handleRowUpdate(t.id, 'amount', Math.abs(val));
+                                                else if (e.target.value === '') handleRowUpdate(t.id, 'amount', 0);
+                                            }}
+                                            style={{ width: '100%', textAlign: 'right', border: '1px solid transparent', background: 'transparent', color: '#16a34a', fontWeight: '500' }}
+                                        />
+                                    </td>
+                                    <td style={{ padding: '0.75rem', textAlign: 'right', color: '#dc2626' }}>
+                                        <input
+                                            type="number"
+                                            value={t.amount < 0 ? Math.abs(t.amount) : ''}
+                                            placeholder="-"
+                                            onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                if (!isNaN(val)) handleRowUpdate(t.id, 'amount', -Math.abs(val));
+                                                else if (e.target.value === '') handleRowUpdate(t.id, 'amount', 0);
+                                            }}
+                                            style={{ width: '100%', textAlign: 'right', border: '1px solid transparent', background: 'transparent', color: '#dc2626', fontWeight: '500' }}
+                                        />
+                                    </td>
                                     <td style={{ padding: '0.75rem', color: '#64748b', fontSize: '0.75rem', textTransform: 'capitalize' }}>
                                         {t.source_type ? t.source_type.replace('_', ' ').toLowerCase() : '-'}
                                     </td>
