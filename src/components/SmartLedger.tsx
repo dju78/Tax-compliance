@@ -150,7 +150,12 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                                     <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }}>
                                         <input
                                             type="date"
-                                            value={t.date.toISOString().split('T')[0]}
+                                            value={(() => {
+                                                try {
+                                                    const d = new Date(t.date);
+                                                    return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : '';
+                                                } catch { return ''; }
+                                            })()}
                                             onChange={(e) => {
                                                 const d = new Date(e.target.value);
                                                 if (!isNaN(d.getTime())) handleRowUpdate(t.id, 'date', d);
