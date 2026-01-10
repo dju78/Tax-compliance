@@ -35,8 +35,9 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
 
     const processFile = (f: File) => {
         const reader = new FileReader();
+        const name = f.name.toLowerCase();
 
-        if (f.name.endsWith('.csv')) {
+        if (name.endsWith('.csv')) {
             reader.onload = (e) => {
                 const text = e.target?.result as string;
                 // Parse CSV headers simply
@@ -47,7 +48,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                 setShowMapping(true);
             };
             reader.readAsText(f);
-        } else {
+        } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
             // Excel
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target?.result as ArrayBuffer);
@@ -61,6 +62,33 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                 }
             };
             reader.readAsArrayBuffer(f);
+        } else if (name.endsWith('.pdf') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png')) {
+            // Document Scan - Create Placeholder
+            const placeholder: Transaction = {
+                id: `doc_${Date.now()}`,
+                company_id: 'default',
+                date: new Date(),
+                description: `Document Upload: ${f.name}`,
+                amount: 0, // Pending manual entry
+                is_business: true,
+                dla_status: 'none',
+                tax_year_label: new Date().getFullYear().toString(),
+                category_name: 'Uncategorized Expense',
+                source_type: documentType,
+                notes: 'Manual entry required from source document'
+            };
+
+            onUpload({
+                transactions: [placeholder],
+                summary: {
+                    total_inflow: 0,
+                    total_outflow: 0,
+                    net_cash_flow: 0,
+                    transaction_count: 1,
+                    period_start: new Date(),
+                    period_end: new Date()
+                }
+            });
         }
     };
 
@@ -153,7 +181,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
             >
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📂</div>
                 <h3 style={{ color: '#334155', marginBottom: '0.5rem' }}>Drag & drop your {documentType.replace('_', ' ').toLowerCase()} here</h3>
-                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Supports CSV and Excel (XLSX) files</p>
+                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Supports CSV, Excel, PDF, JPG, PNG</p>
 
                 <label style={{
                     background: 'var(--color-primary)',
@@ -164,7 +192,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                     fontWeight: '600'
                 }}>
                     Upload File
-                    <input type="file" hidden accept=".csv, .xlsx, .xls" onChange={handleFileSelect} />
+                    <input type="file" hidden accept=".csv, .xlsx, .xls, .pdf, .jpg, .jpeg, .png" onChange={handleFileSelect} />
                 </label>
             </div>
 
