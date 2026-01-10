@@ -147,22 +147,39 @@ function App() {
   const handleStatementUpload = (data: { transactions: Transaction[], summary: StatementSummary }) => {
     // Inject company_id into transactions
     const taggedTransactions = data.transactions.map(t => ({ ...t, company_id: activeCompanyId }));
-    const taggedData = { ...data, transactions: taggedTransactions };
 
-    updateSession(s => ({
-      ...s,
-      statementData: taggedData,
-      pitInput: {
-        ...s.pitInput,
-        gross_income: data.summary.total_inflow,
-        allowable_deductions: data.summary.total_outflow,
-      },
-      citInput: {
-        ...s.citInput,
-        turnover: data.summary.total_inflow,
-        assessable_profit: Math.max(0, data.summary.net_cash_flow)
-      }
-    }));
+    updateSession(s => {
+      const existingTxns = s.statementData?.transactions || [];
+      const newTxns = [...existingTxns, ...taggedTransactions];
+
+      // Re-calculate Summary
+      const total_inflow = newTxns.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
+      const total_outflow = newTxns.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
+
+      const newSummary: StatementSummary = {
+        total_inflow,
+        total_outflow,
+        net_cash_flow: total_inflow - total_outflow,
+        transaction_count: newTxns.length,
+        period_start: newTxns[0]?.date || new Date(),
+        period_end: newTxns[newTxns.length - 1]?.date || new Date()
+      };
+
+      return {
+        ...s,
+        statementData: { transactions: newTxns, summary: newSummary },
+        pitInput: {
+          ...s.pitInput,
+          gross_income: total_inflow,
+          allowable_deductions: total_outflow,
+        },
+        citInput: {
+          ...s.citInput,
+          turnover: total_inflow,
+          assessable_profit: Math.max(0, total_inflow - total_outflow)
+        }
+      };
+    });
 
     setActiveView('transactions');
   };

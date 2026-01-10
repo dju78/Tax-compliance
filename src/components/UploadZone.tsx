@@ -25,22 +25,73 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
-        const f = e.dataTransfer.files[0];
-        if (f) processFile(f);
+        if (e.dataTransfer.files.length > 0) {
+            handleFiles(Array.from(e.dataTransfer.files));
+        }
     }, []);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) processFile(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0) {
+            handleFiles(Array.from(e.target.files));
+        }
     };
 
-    const processFile = (f: File) => {
+    const handleFiles = (files: File[]) => {
+        const docTransactions: Transaction[] = [];
+        let dataFile: File | null = null;
+
+        files.forEach(f => {
+            const name = f.name.toLowerCase();
+            if (name.endsWith('.csv') || name.endsWith('.xlsx') || name.endsWith('.xls')) {
+                if (!dataFile) dataFile = f; // Only take first data file for mapping
+            } else if (name.endsWith('.pdf') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png')) {
+                // Batch create placeholders
+                const previewUrl = URL.createObjectURL(f);
+                docTransactions.push({
+                    id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    company_id: 'default',
+                    date: new Date(),
+                    description: `Document Upload: ${f.name}`,
+                    amount: 0,
+                    is_business: true,
+                    dla_status: 'none',
+                    tax_year_label: new Date().getFullYear().toString(),
+                    category_name: 'Uncategorized Expense',
+                    source_type: documentType,
+                    preview_url: previewUrl,
+                    notes: 'Manual entry required from source document'
+                });
+            }
+        });
+
+        // Upload Docs Batch
+        if (docTransactions.length > 0) {
+            onUpload({
+                transactions: docTransactions,
+                summary: {
+                    total_inflow: 0,
+                    total_outflow: 0,
+                    net_cash_flow: 0,
+                    transaction_count: docTransactions.length,
+                    period_start: new Date(),
+                    period_end: new Date()
+                }
+            });
+        }
+
+        // Process Data File (CSV/Excel) - Only one at a time for mapping UI
+        if (dataFile) {
+            processDataFile(dataFile);
+        }
+    };
+
+    const processDataFile = (f: File) => {
         const reader = new FileReader();
         const name = f.name.toLowerCase();
 
         if (name.endsWith('.csv')) {
             reader.onload = (e) => {
                 const text = e.target?.result as string;
-                // Parse CSV headers simply
                 const lines = text.split(/\r?\n/);
                 const h = lines[0].split(',').map(c => c.replace(/"/g, '').trim());
                 setHeaders(h);
@@ -49,7 +100,6 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
             };
             reader.readAsText(f);
         } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
-            // Excel
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target?.result as ArrayBuffer);
                 const workbook = XLSX.read(data, { type: 'array' });
@@ -62,36 +112,6 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                 }
             };
             reader.readAsArrayBuffer(f);
-        } else if (name.endsWith('.pdf') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png')) {
-            // Document Scan - Create Placeholder
-            const previewUrl = URL.createObjectURL(f);
-
-            const placeholder: Transaction = {
-                id: `doc_${Date.now()}`,
-                company_id: 'default',
-                date: new Date(),
-                description: `Document Upload: ${f.name}`,
-                amount: 0, // Pending manual entry
-                is_business: true,
-                dla_status: 'none',
-                tax_year_label: new Date().getFullYear().toString(),
-                category_name: 'Uncategorized Expense',
-                source_type: documentType,
-                preview_url: previewUrl,
-                notes: 'Manual entry required from source document'
-            };
-
-            onUpload({
-                transactions: [placeholder],
-                summary: {
-                    total_inflow: 0,
-                    total_outflow: 0,
-                    net_cash_flow: 0,
-                    transaction_count: 1,
-                    period_start: new Date(),
-                    period_end: new Date()
-                }
-            });
         }
     };
 
@@ -195,7 +215,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                     fontWeight: '600'
                 }}>
                     Upload File
-                    <input type="file" hidden accept=".csv, .xlsx, .xls, .pdf, .jpg, .jpeg, .png" onChange={handleFileSelect} />
+                    <input type="file" hidden multiple accept=".csv, .xlsx, .xls, .pdf, .jpg, .jpeg, .png" onChange={handleFileSelect} />
                 </label>
             </div>
 
