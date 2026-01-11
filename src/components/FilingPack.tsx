@@ -57,7 +57,26 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
         generatePDFReport(reportData);
     };
 
-    // ...
+    const handleDownloadExcel = () => {
+        if (isBlocked) {
+            alert("Cannot export excel pack while critical red flags exist.");
+            return;
+        }
+        /*  const workbook = generateExcelWorkbook({
+             transactions,
+             summary,
+             pit: pitInput,
+             cit: citInput,
+             vat: vatInput
+         }); */
+        // Excel download logic would go here
+        alert("Excel export not yet implemented in this delta.");
+    };
+
+    const handleSaveForAccountant = () => {
+        // Snapshot logic
+        alert("Snapshot saved! (Simulation)");
+    };
 
     const toggleCheck = (key: keyof FilingChecks) => {
         if (key === 'company_id' || key === 'updated_at' || key === 'tax_year_label') return;
@@ -68,8 +87,44 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
         }));
     };
 
-    // ...
+    return (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+            {/* Status Banner */}
+            <div style={{
+                marginBottom: '2rem',
+                padding: '1.5rem',
+                borderRadius: '12px',
+                background: readinessStatus === 'GREEN' ? '#dcfce7' : (readinessStatus === 'AMBER' ? '#fef3c7' : '#fee2e2'),
+                border: `2px solid ${readinessStatus === 'GREEN' ? '#22c55e' : (readinessStatus === 'AMBER' ? '#f59e0b' : '#ef4444')}`,
+                display: 'flex', alignItems: 'center', gap: '1.5rem'
+            }}>
+                <div style={{ fontSize: '3rem' }}>
+                    {readinessStatus === 'GREEN' ? '✅' : (readinessStatus === 'AMBER' ? '⚠️' : '🛑')}
+                </div>
+                <div>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '0.5rem' }}>
+                        Filing Status: {readinessStatus}
+                    </h2>
+                    <p style={{ color: '#334155' }}>
+                        {readinessStatus === 'GREEN'
+                            ? "All systems go. Your filing pack is ready for export."
+                            : (readinessStatus === 'AMBER'
+                                ? "Manual checks incomplete. You can preview the draft, but final export is blocked."
+                                : `${uncategorizedCount} Uncategorized transactions found. Action required.`
+                            )
+                        }
+                    </p>
+                </div>
+            </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '2rem' }}>
+                {/* Left Column: Actions & Checks */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+                    {/* Readiness Checklist */}
+                    <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#0f172a' }}>Readiness Checklist</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <CheckItem
                                 label="Income Reconciled with Bank Statement"
                                 checked={filingChecks.bank_reconciled}
@@ -80,16 +135,18 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
                                 checked={filingChecks.expenses_reviewed}
                                 onChange={() => toggleCheck('expenses_reviewed')}
                             />
-    {/* Deprecated Checks Visuals but keeping simpler UI */ }
+                        </div>
+                    </div>
 
-    // ...
-
+                    {/* Actions */}
+                    <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#0f172a' }}>Export Options</h3>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <ActionButton
                                 label={isAmberBlock ? "Download Draft Preview" : "Download Filing Summary (PDF)"}
                                 icon="📄"
                                 onClick={handleDownloadPdf}
-                                disabled={isBlocked} 
+                                disabled={isBlocked}
                                 primary
                             />
                             <ActionButton
@@ -125,12 +182,29 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
                                 <span>🔐</span> Save Snapshot for Accountant
                             </button>
                         </div>
-                    </div >
+                    </div>
 
-                </div >
+                </div>
 
-            </div >
-        </div >
+                {/* Right Column: Assumptions & Info */}
+                <div>
+                    <div style={{ background: '#fffbeb', padding: '1.5rem', borderRadius: '12px', border: '1px solid #fcd34d' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.75rem', color: '#92400e' }}>📌 Important Assumptions</h3>
+                        <ul style={{ paddingLeft: '1.2rem', fontSize: '0.9rem', color: '#92400e', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <li><strong>Management Representation:</strong> By exporting this pack, management confirms that all expenses claimed are wholly, reasonably, and exclusively for business purposes.</li>
+                            <li><strong>Audit Readiness:</strong> The user acknowledges that supporting documentation (receipts/invoices) must be available for all claimed deductions upon FIRS request.</li>
+                            <li><strong>Regulatory Basis:</strong> Computations are based on the Finance Act 2024/2025 provisions. Tax authorities may interpret specific provisions differently.</li>
+                        </ul>
+                    </div>
+
+                    <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: '8px', background: '#eff6ff', border: '1px solid #dbeafe', fontSize: '0.9rem', color: '#1e40af' }}>
+                        <strong>Need Help?</strong><br />
+                        If you are unsure about any item, please consult a chartered tax practitioner before filing.
+                    </div>
+                </div>
+
+            </div>
+        </div>
     );
 }
 
