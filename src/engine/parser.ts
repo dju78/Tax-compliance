@@ -11,7 +11,7 @@ export function parseCSV(csvContent: string): { transactions: Transaction[], sum
 
         const date = new Date(cols[0]);
         let amount = 0;
-        let description = cols[1];
+        const description = cols[1];
 
         // Heuristic for Signed vs Debit/Credit
         if (cols.length >= 4) {

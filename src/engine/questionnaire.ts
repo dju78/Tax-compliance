@@ -5,7 +5,7 @@ export interface Question {
     text: string;
     type: QuestionType;
     options?: { label: string; value: string }[];
-    condition?: (answers: Record<string, any>) => boolean;
+    condition?: (answers: Record<string, unknown>) => boolean;
 }
 
 export interface QuestionnaireFlow {

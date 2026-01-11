@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import type { Transaction } from '../engine/types';
 import { calculateCIT, type CitInput } from '../engine/cit';
+import type { AuditInputs } from '../engine/auditRisk';
+import { EXPENSE_CHECKLIST_LTD } from '../data/expenseChecklists';
 
 interface TaxCITProps {
     transactions: Transaction[];
     savedInput: CitInput;
     onSave: (input: CitInput) => void;
     onNavigate?: (view: string) => void;
+    expenseChecklist?: AuditInputs;
 }
 
-export function TaxCIT({ transactions, savedInput, onSave, onNavigate }: TaxCITProps) {
+export function TaxCIT({ transactions, savedInput, onSave, onNavigate, expenseChecklist }: TaxCITProps) {
     const [input, setInput] = useState<CitInput>(savedInput);
     const [autoSync, setAutoSync] = useState(true);
 
@@ -23,6 +26,7 @@ export function TaxCIT({ transactions, savedInput, onSave, onNavigate }: TaxCITP
         // Very basic profit calculation. In reality, one would adjust for non-deductibles here.
         const profit = Math.max(0, turnover - expenses);
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setInput(prev => ({
             ...prev,
             turnover,
@@ -80,6 +84,23 @@ export function TaxCIT({ transactions, savedInput, onSave, onNavigate }: TaxCITP
                             style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                         />
                         <small style={{ color: '#64748b' }}>Net Profit after adjustments (Capital Assumptions etc)</small>
+
+                        {/* Checklist Add-backs Suggestion */}
+                        {expenseChecklist && expenseChecklist.selectedItems.length > 0 && (
+                            <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '6px' }}>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#c2410c', marginBottom: '0.5rem' }}>
+                                    ⚠️ Potential Add-backs detected from Checklist
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: '#9a3412' }}>
+                                    You checked items that are likely disallowed. Consider adding these back to your Assessable Profit:
+                                    <ul style={{ paddingLeft: '1.2rem', margin: '0.5rem 0' }}>
+                                        {EXPENSE_CHECKLIST_LTD.flatMap(c => c.items).filter(i => expenseChecklist.selectedItems.includes(i.id) && i.isDisallowed).map(i => (
+                                            <li key={i.id}>{i.label}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

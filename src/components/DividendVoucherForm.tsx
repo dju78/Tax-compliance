@@ -14,64 +14,70 @@ interface DividendVoucherFormProps {
 
 export function DividendVoucherForm({ company, voucherId, initialData, onSave, onCancel }: DividendVoucherFormProps) {
     // Generate ID and Number default if new
-    const isNew = !voucherId && !initialData?.id;
-    const defaultId = initialData?.id || crypto.randomUUID();
-    const defaultNumber = initialData?.voucher_number || `DIV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(!!voucherId && !initialData);
-    const [formData, setFormData] = useState<DividendVoucher>(initialData || {
-        id: defaultId,
-        company_id: company.id,
-        voucher_number: defaultNumber,
-        status: 'draft',
-        date_of_payment: new Date(),
-        tax_year_label: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
-        shareholder_name: '',
-        shareholder_address: '',
-        shares_held: 0,
-        share_class: 'Ordinary',
-        gross_dividend: 0,
-        tax_credit: 0,
-        lines: [{ id: crypto.randomUUID(), description: 'Interim Dividend', amount: 0 }],
-        authorised_by_name: '',
-        authorised_by_role: 'Director',
-        received_by_name: ''
+
+    // Lazy init to avoid impure Math.random in render
+    const [formData, setFormData] = useState<DividendVoucher>(() => {
+        if (initialData) return initialData;
+        const defaultId = crypto.randomUUID();
+        const defaultNumber = `DIV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+        return {
+            id: defaultId,
+            company_id: company.id,
+            voucher_number: defaultNumber,
+            status: 'draft',
+            date_of_payment: new Date(),
+            tax_year_label: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+            shareholder_name: '',
+            shareholder_address: '',
+            shares_held: 0,
+            share_class: 'Ordinary',
+            gross_dividend: 0,
+            tax_credit: 0,
+            lines: [{ id: crypto.randomUUID(), description: 'Interim Dividend', amount: 0 }],
+            authorised_by_name: '',
+            authorised_by_role: 'Director',
+            received_by_name: ''
+        };
     });
 
+    const isNew = !voucherId && !initialData?.id;
+
     useEffect(() => {
+        const fetchVoucher = async (id: string) => {
+            setLoading(true);
+            const { data } = await supabase
+                .from('dividend_vouchers')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (data) {
+                setFormData({
+                    ...data,
+                    date_of_payment: new Date(data.date_of_payment)
+                } as DividendVoucher);
+            }
+            setLoading(false);
+        };
+
         if (voucherId && !initialData) {
             fetchVoucher(voucherId);
         }
-    }, [voucherId]);
-
-    const fetchVoucher = async (id: string) => {
-        setLoading(true);
-        const { data } = await supabase
-            .from('dividend_vouchers')
-            .select('*')
-            .eq('id', id)
-            .single();
-
-        if (data) {
-            setFormData({
-                ...data,
-                date_of_payment: new Date(data.date_of_payment)
-            } as DividendVoucher);
-        }
-        setLoading(false);
-    };
+    }, [voucherId, initialData]); // Added initialData to dep array
 
     if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading voucher...</div>;
 
-
-    const updateField = (field: keyof DividendVoucher, value: any) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+    const updateField = (field: keyof DividendVoucher, value: unknown) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setFormData(prev => ({ ...prev, [field]: value as any }));
     };
 
-    const updateLine = (id: string, field: keyof DividendVoucherLine, value: any) => {
+    const updateLine = (id: string, field: keyof DividendVoucherLine, value: unknown) => {
         setFormData(prev => {
-            const newLines = prev.lines.map(l => l.id === id ? { ...l, [field]: value } : l);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const newLines = prev.lines.map(l => l.id === id ? { ...l, [field]: value as any } : l);
             // Auto-sum
             const total = newLines.reduce((sum, l) => sum + Number(l.amount || 0), 0);
             return { ...prev, lines: newLines, gross_dividend: total };
@@ -276,8 +282,7 @@ export function DividendVoucherForm({ company, voucherId, initialData, onSave, o
                         fontSize: '0.9rem'
                     }}
                 >
-                    {/*@ts-ignore*/}
-                    {({ blob, url, loading, error: _error }) =>
+                    {({ loading }) =>
                         loading ? 'Generating...' : 'Download PDF'
                     }
                 </PDFDownloadLink>

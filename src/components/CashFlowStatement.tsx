@@ -32,29 +32,7 @@ export function CashFlowStatement({ transactions }: Props) {
     const netFinancing = sumNet(activities.financing);
     const netCashChange = netOperating + netInvesting + netFinancing;
 
-    const Section = ({ title, txns, net }: { title: string, txns: Transaction[], net: number }) => (
-        <div style={{ marginBottom: '1.5rem' }}>
-            <h4 style={{ color: '#64748b', fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{title}</h4>
-            {txns.length === 0 ? (
-                <p style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>No transactions</p>
-            ) : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                    {txns.map(t => (
-                        <li key={t.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '0.25rem 0', borderBottom: '1px dashed #f1f5f9' }}>
-                            <span>{t.description}</span>
-                            <span style={{ color: t.type === 'credit' ? '#10b981' : '#ef4444' }}>
-                                {t.type === 'credit' ? '+' : '-'} ₦{t.amount.toLocaleString()}
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontWeight: 'bold', fontSize: '0.95rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
-                <span>Net Cash from {title}</span>
-                <span style={{ color: net >= 0 ? '#334155' : '#ef4444' }}>₦{net.toLocaleString()}</span>
-            </div>
-        </div>
-    );
+
 
     return (
         <div className="card" style={{ marginTop: '1rem', background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
@@ -73,3 +51,27 @@ export function CashFlowStatement({ transactions }: Props) {
         </div>
     );
 }
+
+const Section = ({ title, txns, net }: { title: string, txns: Transaction[], net: number }) => (
+    <div style={{ marginBottom: '1.5rem' }}>
+        <h4 style={{ color: '#64748b', fontSize: '0.9rem', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{title}</h4>
+        {txns.length === 0 ? (
+            <p style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>No transactions</p>
+        ) : (
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {txns.map(t => (
+                    <li key={t.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', padding: '0.25rem 0', borderBottom: '1px dashed #f1f5f9' }}>
+                        <span>{t.description}</span>
+                        <span style={{ color: t.type === 'credit' ? '#10b981' : '#ef4444' }}>
+                            {t.type === 'credit' ? '+' : '-'} ₦{t.amount.toLocaleString()}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontWeight: 'bold', fontSize: '0.95rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
+            <span>Net Cash from {title}</span>
+            <span style={{ color: net >= 0 ? '#334155' : '#ef4444' }}>₦{net.toLocaleString()}</span>
+        </div>
+    </div>
+);

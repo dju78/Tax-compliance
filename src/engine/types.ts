@@ -83,6 +83,16 @@ export interface Company {
     profile_type?: 'individual' | 'business';
     nin?: string;
     business_type?: string;
+    created_at?: Date;
+    entity_type?: 'sole_trader' | 'ltd';
+}
+
+export interface FilingChecks {
+    company_id: string; // redundant but good for safety
+    tax_year_label: string; // e.g. "2023"
+    bank_reconciled: boolean;
+    expenses_reviewed: boolean;
+    updated_at: Date;
 }
 
 export interface DividendVoucher {

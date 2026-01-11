@@ -32,7 +32,27 @@ export function StatementOfAccount({ transactions, onUpdate, onDownloadExcel }: 
         'Tax Payment'
     ];
 
-    let runningBalance = 0;
+
+    const rowsWithBalance = transactions.reduce<{ rows: (Transaction & { inflow: number; outflow: number; balance: number })[], balance: number }>((acc, txn, index) => {
+        const inflow = txn.type === 'credit' ? txn.amount : 0;
+        const outflow = txn.type === 'debit' ? txn.amount : 0;
+        let newBalance = acc.balance;
+
+        if (index === 0 && txn.description.toLowerCase().includes('opening')) {
+            newBalance = txn.amount;
+        } else {
+            newBalance += inflow - outflow;
+        }
+
+        acc.rows.push({
+            ...txn,
+            inflow,
+            outflow,
+            balance: newBalance
+        });
+        acc.balance = newBalance;
+        return acc;
+    }, { rows: [], balance: 0 }).rows;
 
     return (
         <div className="card" style={{ marginTop: '1rem', background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
@@ -59,41 +79,30 @@ export function StatementOfAccount({ transactions, onUpdate, onDownloadExcel }: 
                         </tr>
                     </thead>
                     <tbody>
-                        {transactions.map((txn, index) => {
-                            const inflow = txn.type === 'credit' ? txn.amount : 0;
-                            const outflow = txn.type === 'debit' ? txn.amount : 0;
-
-                            if (index === 0 && txn.description.toLowerCase().includes('opening')) {
-                                runningBalance = txn.amount;
-                            } else {
-                                runningBalance += inflow - outflow;
-                            }
-
-                            return (
-                                <tr key={txn.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                    <td style={{ padding: '0.5rem', color: '#475569', whiteSpace: 'nowrap' }}>{new Date(txn.date).toLocaleDateString()}</td>
-                                    <td style={{ padding: '0.5rem', color: '#1e293b', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{txn.description}</td>
-                                    <td style={{ padding: '0.5rem' }}>
-                                        <select
-                                            value={txn.category || (txn.type === 'credit' ? 'Revenue - General' : 'Office Expenses - General')}
-                                            onChange={(e) => handleCategoryChange(txn.id, e.target.value)}
-                                            style={{ padding: '0.25rem', borderRadius: '4px', border: '1px solid #cbd5e1', width: '100%', fontSize: '0.8rem' }}
-                                        >
-                                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                    </td>
-                                    <td style={{ padding: '0.5rem', textAlign: 'right', color: '#ef4444' }}>
-                                        {outflow > 0 ? `₦${outflow.toLocaleString()}` : '-'}
-                                    </td>
-                                    <td style={{ padding: '0.5rem', textAlign: 'right', color: '#10b981' }}>
-                                        {inflow > 0 ? `₦${inflow.toLocaleString()}` : '-'}
-                                    </td>
-                                    <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 'bold', color: '#334155' }}>
-                                        ₦{runningBalance.toLocaleString()}
-                                    </td>
-                                </tr>
-                            );
-                        })}
+                        {rowsWithBalance.map((txn) => (
+                            <tr key={txn.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <td style={{ padding: '0.5rem', color: '#475569', whiteSpace: 'nowrap' }}>{new Date(txn.date).toLocaleDateString()}</td>
+                                <td style={{ padding: '0.5rem', color: '#1e293b', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{txn.description}</td>
+                                <td style={{ padding: '0.5rem' }}>
+                                    <select
+                                        value={txn.category || (txn.type === 'credit' ? 'Revenue - General' : 'Office Expenses - General')}
+                                        onChange={(e) => handleCategoryChange(txn.id, e.target.value)}
+                                        style={{ padding: '0.25rem', borderRadius: '4px', border: '1px solid #cbd5e1', width: '100%', fontSize: '0.8rem' }}
+                                    >
+                                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </td>
+                                <td style={{ padding: '0.5rem', textAlign: 'right', color: '#ef4444' }}>
+                                    {txn.outflow > 0 ? `₦${txn.outflow.toLocaleString()}` : '-'}
+                                </td>
+                                <td style={{ padding: '0.5rem', textAlign: 'right', color: '#10b981' }}>
+                                    {txn.inflow > 0 ? `₦${txn.inflow.toLocaleString()}` : '-'}
+                                </td>
+                                <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 'bold', color: '#334155' }}>
+                                    ₦{txn.balance.toLocaleString()}
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>

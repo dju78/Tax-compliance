@@ -183,7 +183,7 @@ export function DividendVoucherPDF({ voucher, company }: DividendVoucherPDFProps
                         <View key={line.id} style={styles.row}>
                             <Text style={styles.cellDesc}>{line.description}</Text>
                             <Text style={styles.cellAmount}>
-                                {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(line.amount)}
+                                {`N${line.amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                             </Text>
                         </View>
                     ))}
@@ -192,14 +192,14 @@ export function DividendVoucherPDF({ voucher, company }: DividendVoucherPDFProps
                     <View style={styles.totalRow}>
                         <Text style={[styles.cellDesc, { fontWeight: 'bold' }]}>Gross Dividend Payable</Text>
                         <Text style={[styles.cellAmount, { fontWeight: 'bold' }]}>
-                            {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(voucher.gross_dividend)}
+                            {`N${voucher.gross_dividend.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                         </Text>
                     </View>
 
                     <View style={[styles.totalRow, { borderTopWidth: 0, marginTop: 4 }]}>
                         <Text style={styles.cellDesc}>Tax Credit (Not applicable)</Text>
                         <Text style={styles.cellAmount}>
-                            {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(0)}
+                            {`N${(0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                         </Text>
                     </View>
                 </View>

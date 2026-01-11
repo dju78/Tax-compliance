@@ -25,12 +25,13 @@ export function Settings({ company, onUpdateCompany }: SettingsProps) {
     // Effect to ensure we don't stay on a forbidden tab
     useEffect(() => {
         if (activeTab === 'profile' && !canReadProfile) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             if (canReadTax) setActiveTab('tax_year');
             else if (canReadCats) setActiveTab('categories');
             else if (canReadRules) setActiveTab('rules');
             else if (canReadUsers) setActiveTab('users');
         }
-    }, [currentRole, canReadProfile, activeTab]);
+    }, [currentRole, canReadProfile, activeTab, canReadTax, canReadCats, canReadRules, canReadUsers]);
 
     if (loading) return <div style={{ padding: '2rem' }}>Loading permissions...</div>;
 
@@ -188,9 +189,9 @@ function CompanyProfileSettings({ company, onSave, canEdit }: { company: Company
 
             onSave(formData);
             alert("Profile updated successfully!");
-        } catch (e: any) {
+        } catch (e) {
             console.error(e);
-            alert("Error saving profile: " + e.message);
+            alert("Error saving profile: " + (e instanceof Error ? e.message : String(e)));
         } finally {
             setSaving(false);
         }
@@ -204,27 +205,27 @@ function CompanyProfileSettings({ company, onSave, canEdit }: { company: Company
                 {isIndividual ? "Individual Profile" : "Business Profile"} {canEdit ? "" : "(Read Only)"}
             </h3>
 
-            {/* Profile Type Toggle */}
+            {/* Entity Type Toggle (New Source of Truth) */}
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: canEdit ? 'pointer' : 'default' }}>
                     <input
                         type="radio"
-                        name="profile_type"
-                        checked={isIndividual}
-                        onChange={() => handleChange('profile_type', 'individual')}
+                        name="entity_type"
+                        checked={formData.entity_type === 'sole_trader'}
+                        onChange={() => handleChange('entity_type', 'sole_trader')}
                         disabled={!canEdit}
                     />
-                    Individual
+                    Sole Trader (Individual)
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: canEdit ? 'pointer' : 'default' }}>
                     <input
                         type="radio"
-                        name="profile_type"
-                        checked={!isIndividual}
-                        onChange={() => handleChange('profile_type', 'business')}
+                        name="entity_type"
+                        checked={formData.entity_type === 'ltd'}
+                        onChange={() => handleChange('entity_type', 'ltd')}
                         disabled={!canEdit}
                     />
-                    Business Entity
+                    Limited Company (LTD)
                 </label>
             </div>
 

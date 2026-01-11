@@ -31,8 +31,8 @@ export function Auth() {
                     setMessage({ type: 'success', text: 'Check your email for the confirmation link!' });
                 }
             }
-        } catch (error: any) {
-            setMessage({ type: 'error', text: error.message || 'An error occurred' });
+        } catch (error) {
+            setMessage({ type: 'error', text: (error instanceof Error ? error.message : 'An error occurred') });
         } finally {
             setLoading(false);
         }

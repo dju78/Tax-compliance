@@ -1,61 +1,33 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { EXPENSE_CHECKLIST_SOLE, EXPENSE_CHECKLIST_LTD } from '../data/expenseChecklists';
 import { calculateAuditRisk, type AuditInputs } from '../engine/auditRisk';
 import { AuditRiskReport } from './AuditRiskReport';
 
-export function ExpenseChecklist() {
-    const [businessType, setBusinessType] = useState<'SOLE' | 'LTD'>('SOLE');
-    const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-    const [turnover, setTurnover] = useState<number>(0);
-    const [totalExpenses, setTotalExpenses] = useState<number>(0); // Mainly for Sole checks
-    const [profit, setProfit] = useState<number>(0); // Mainly for LTD director check
+interface ExpenseChecklistProps {
+    data: AuditInputs;
+    onChange: (data: AuditInputs) => void;
+}
 
-    // Specific inputs for proportion tests
-    const [transportTotal, setTransportTotal] = useState<number>(0);
-    const [marketingTotal, setMarketingTotal] = useState<number>(0);
-    const [phoneTotal, setPhoneTotal] = useState<number>(0);
-    const [directorPay, setDirectorPay] = useState<number>(0);
+export function ExpenseChecklist({ data, onChange }: ExpenseChecklistProps) {
+    const checklist = data.type === 'SOLE' ? EXPENSE_CHECKLIST_SOLE : EXPENSE_CHECKLIST_LTD;
 
-    // Boolean flags
-    const [receiptMissing, setReceiptMissing] = useState(false);
-    const [noSeparateAccount, setNoSeparateAccount] = useState(false); // Sole
-    const [cashOver500k, setCashOver500k] = useState(false); // LTD
-    const [noWHT, setNoWHT] = useState(false); // LTD
-    const [repeatedLosses, setRepeatedLosses] = useState(false);
-    const [suddenSpike, setSuddenSpike] = useState(false);
-
-    const checklist = businessType === 'SOLE' ? EXPENSE_CHECKLIST_SOLE : EXPENSE_CHECKLIST_LTD;
+    const updateField = (field: keyof AuditInputs, value: unknown) => {
+        onChange({ ...data, [field]: value });
+    };
 
     const toggleItem = (itemId: string) => {
-        const newSet = new Set(selectedItems);
+        const newSet = new Set(data.selectedItems);
         if (newSet.has(itemId)) {
             newSet.delete(itemId);
         } else {
             newSet.add(itemId);
         }
-        setSelectedItems(newSet);
+        updateField('selectedItems', Array.from(newSet));
     };
 
     const auditResult = useMemo(() => {
-        const inputs: AuditInputs = {
-            type: businessType,
-            turnover,
-            totalExpenses,
-            profit,
-            selectedItems: Array.from(selectedItems),
-            receiptMissing,
-            noSeparateAccount,
-            cashOver500k,
-            noWHT,
-            repeatedLosses,
-            suddenSpike,
-            transportTotal,
-            marketingTotal,
-            phoneInternetTotal: phoneTotal,
-            directorRemuneration: directorPay
-        };
-        return calculateAuditRisk(inputs, checklist);
-    }, [businessType, turnover, totalExpenses, profit, selectedItems, receiptMissing, noSeparateAccount, cashOver500k, noWHT, repeatedLosses, suddenSpike, transportTotal, marketingTotal, phoneTotal, directorPay, checklist]);
+        return calculateAuditRisk(data, checklist);
+    }, [data, checklist]);
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -71,23 +43,23 @@ export function ExpenseChecklist() {
                         <span style={{ fontWeight: '600', color: '#64748b' }}>Business Type:</span>
                         <div style={{ display: 'flex', background: '#f1f5f9', padding: '0.25rem', borderRadius: '6px' }}>
                             <button
-                                onClick={() => setBusinessType('SOLE')}
+                                onClick={() => updateField('type', 'SOLE')}
                                 style={{
                                     padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '500',
-                                    background: businessType === 'SOLE' ? 'white' : 'transparent',
-                                    boxShadow: businessType === 'SOLE' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-                                    color: businessType === 'SOLE' ? '#0f172a' : '#64748b'
+                                    background: data.type === 'SOLE' ? 'white' : 'transparent',
+                                    boxShadow: data.type === 'SOLE' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                                    color: data.type === 'SOLE' ? '#0f172a' : '#64748b'
                                 }}
                             >
                                 Sole Proprietor
                             </button>
                             <button
-                                onClick={() => setBusinessType('LTD')}
+                                onClick={() => updateField('type', 'LTD')}
                                 style={{
                                     padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '500',
-                                    background: businessType === 'LTD' ? 'white' : 'transparent',
-                                    boxShadow: businessType === 'LTD' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-                                    color: businessType === 'LTD' ? '#0f172a' : '#64748b'
+                                    background: data.type === 'LTD' ? 'white' : 'transparent',
+                                    boxShadow: data.type === 'LTD' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                                    color: data.type === 'LTD' ? '#0f172a' : '#64748b'
                                 }}
                             >
                                 Limited Company (LTD)
@@ -101,41 +73,41 @@ export function ExpenseChecklist() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div>
                                 <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.25rem' }}>Annual Turnover (₦)</label>
-                                <input type="number" value={turnover} onChange={(e) => setTurnover(Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                                <input type="number" value={data.turnover || ''} onChange={(e) => updateField('turnover', Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                             </div>
 
-                            {businessType === 'SOLE' ? (
+                            {data.type === 'SOLE' ? (
                                 <div>
                                     <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.25rem' }}>Total Expenses (₦)</label>
-                                    <input type="number" value={totalExpenses} onChange={(e) => setTotalExpenses(Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                                    <input type="number" value={data.totalExpenses || ''} onChange={(e) => updateField('totalExpenses', Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                                 </div>
                             ) : (
                                 <div>
                                     <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.25rem' }}>Net Profit (Pre-Tax) (₦)</label>
-                                    <input type="number" value={profit} onChange={(e) => setProfit(Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                                    <input type="number" value={data.profit || ''} onChange={(e) => updateField('profit', Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                                 </div>
                             )}
 
                             {/* Specific Category Totals for Ratio Checks */}
                             <div>
                                 <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.25rem' }}>Transport/Fuel Cost (₦)</label>
-                                <input type="number" value={transportTotal} onChange={(e) => setTransportTotal(Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                                <input type="number" value={data.transportTotal || ''} onChange={(e) => updateField('transportTotal', Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                             </div>
                             <div>
                                 <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.25rem' }}>Marketing Cost (₦)</label>
-                                <input type="number" value={marketingTotal} onChange={(e) => setMarketingTotal(Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                                <input type="number" value={data.marketingTotal || ''} onChange={(e) => updateField('marketingTotal', Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                             </div>
 
-                            {businessType === 'SOLE' && (
+                            {data.type === 'SOLE' && (
                                 <div>
                                     <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.25rem' }}>Phone/Internet Cost (₦)</label>
-                                    <input type="number" value={phoneTotal} onChange={(e) => setPhoneTotal(Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                                    <input type="number" value={data.phoneInternetTotal || ''} onChange={(e) => updateField('phoneInternetTotal', Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                                 </div>
                             )}
-                            {businessType === 'LTD' && (
+                            {data.type === 'LTD' && (
                                 <div>
                                     <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.25rem' }}>Director Remuneration (₦)</label>
-                                    <input type="number" value={directorPay} onChange={(e) => setDirectorPay(Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                                    <input type="number" value={data.directorRemuneration || ''} onChange={(e) => updateField('directorRemuneration', Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                                 </div>
                             )}
                         </div>
@@ -143,36 +115,36 @@ export function ExpenseChecklist() {
                         {/* Red Flag Toggles */}
                         <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                                <input type="checkbox" checked={receiptMissing} onChange={(e) => setReceiptMissing(e.target.checked)} />
+                                <input type="checkbox" checked={data.receiptMissing || false} onChange={(e) => updateField('receiptMissing', e.target.checked)} />
                                 <span>I have some expenses without receipts / invoices</span>
                             </label>
 
-                            {businessType === 'SOLE' && (
+                            {data.type === 'SOLE' && (
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                                    <input type="checkbox" checked={noSeparateAccount} onChange={(e) => setNoSeparateAccount(e.target.checked)} />
+                                    <input type="checkbox" checked={data.noSeparateAccount || false} onChange={(e) => updateField('noSeparateAccount', e.target.checked)} />
                                     <span>I do not have a separate business bank account</span>
                                 </label>
                             )}
 
-                            {businessType === 'LTD' && (
+                            {data.type === 'LTD' && (
                                 <>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                                        <input type="checkbox" checked={cashOver500k} onChange={(e) => setCashOver500k(e.target.checked)} />
+                                        <input type="checkbox" checked={data.cashOver500k || false} onChange={(e) => updateField('cashOver500k', e.target.checked)} />
                                         <span>I made cash payments above ₦500,000</span>
                                     </label>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                                        <input type="checkbox" checked={noWHT} onChange={(e) => setNoWHT(e.target.checked)} />
+                                        <input type="checkbox" checked={data.noWHT || false} onChange={(e) => updateField('noWHT', e.target.checked)} />
                                         <span>I did not deduct WHT where required</span>
                                     </label>
                                 </>
                             )}
 
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                                <input type="checkbox" checked={repeatedLosses} onChange={(e) => setRepeatedLosses(e.target.checked)} />
+                                <input type="checkbox" checked={data.repeatedLosses || false} onChange={(e) => updateField('repeatedLosses', e.target.checked)} />
                                 <span>Business has made losses for 2+ years</span>
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                                <input type="checkbox" checked={suddenSpike} onChange={(e) => setSuddenSpike(e.target.checked)} />
+                                <input type="checkbox" checked={data.suddenSpike || false} onChange={(e) => updateField('suddenSpike', e.target.checked)} />
                                 <span>Expenses spiked &gt;40% compared to last year</span>
                             </label>
                         </div>
@@ -192,7 +164,7 @@ export function ExpenseChecklist() {
                                                 <input
                                                     type="checkbox"
                                                     id={item.id}
-                                                    checked={selectedItems.has(item.id)}
+                                                    checked={data.selectedItems?.includes(item.id) || false}
                                                     onChange={() => toggleItem(item.id)}
                                                     style={{ marginTop: '0.25rem' }}
                                                 />

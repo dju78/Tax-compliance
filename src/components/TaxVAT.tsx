@@ -60,6 +60,7 @@ export function TaxVAT({ transactions, savedInput, onSave, onNavigate }: TaxVATP
         const outputVal = vatableIncome - (vatableIncome / 1.075);
         const inputVal = vatableExpense - (vatableExpense / 1.075);
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setInput(prev => ({
             ...prev,
             output_vat: outputVal,

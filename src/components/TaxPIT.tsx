@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import type { Transaction } from '../engine/types';
 import { calculatePIT, type PitInput } from '../engine/pit';
+import type { AuditInputs } from '../engine/auditRisk';
+import { EXPENSE_CHECKLIST_SOLE } from '../data/expenseChecklists';
 
 interface TaxPITProps {
     transactions: Transaction[];
     savedInput: PitInput;
     onSave: (input: PitInput) => void;
-    onNavigate?: (view: string) => void; // Added onNavigate
+    onNavigate?: (view: string) => void;
+    expenseChecklist?: AuditInputs;
 }
 
-export function TaxPIT({ transactions, savedInput, onSave, onNavigate }: TaxPITProps) { // Added onNavigate
+export function TaxPIT({ transactions, savedInput, onSave, onNavigate, expenseChecklist }: TaxPITProps) {
     // ... existing code ...
 
     // (Adding button in return statement header)
@@ -30,6 +33,7 @@ export function TaxPIT({ transactions, savedInput, onSave, onNavigate }: TaxPITP
             .filter(t => t.category_name?.toLowerCase().includes('rent') && t.amount < 0)
             .reduce((acc, t) => acc + Math.abs(t.amount), 0);
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setInput(prev => ({
             ...prev,
             gross_income: income,
@@ -81,6 +85,23 @@ export function TaxPIT({ transactions, savedInput, onSave, onNavigate }: TaxPITP
                     {autoSync && (
                         <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#0f766e', background: '#f0fdfa', padding: '0.75rem', borderRadius: '6px' }}>
                             values are synced with the ledger.
+                        </div>
+                    )}
+
+                    {/* Checklist Warning for Add-backs */}
+                    {expenseChecklist && expenseChecklist.selectedItems.length > 0 && (
+                        <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '6px' }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#c2410c', marginBottom: '0.5rem' }}>
+                                ⚠️ Personal Expenses Detected
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: '#9a3412' }}>
+                                You flagged the following as personal/disallowed in the checklist. Ensure they are NOT included in 'Allowable Expenses':
+                                <ul style={{ paddingLeft: '1.2rem', margin: '0.5rem 0' }}>
+                                    {EXPENSE_CHECKLIST_SOLE.flatMap(c => c.items).filter(i => expenseChecklist.selectedItems.includes(i.id) && i.isDisallowed).map(i => (
+                                        <li key={i.id}>{i.label}</li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
                     )}
                 </div>

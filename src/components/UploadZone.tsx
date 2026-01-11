@@ -10,7 +10,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [showMapping, setShowMapping] = useState(false);
     const [headers, setHeaders] = useState<string[]>([]);
-    const [rawRows, setRawRows] = useState<any[][]>([]);
+    const [rawRows, setRawRows] = useState<unknown[][]>([]);
 
     const [documentType, setDocumentType] = useState<'BANK_STATEMENT' | 'RECEIPT' | 'INVOICE' | 'OTHER'>('BANK_STATEMENT');
 
@@ -22,21 +22,37 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
         moneyOut: ''    // for split
     });
 
-    const handleDrop = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        if (e.dataTransfer.files.length > 0) {
-            handleFiles(Array.from(e.dataTransfer.files));
+    const processDataFile = useCallback((f: File) => {
+        const reader = new FileReader();
+        const name = f.name.toLowerCase();
+
+        if (name.endsWith('.csv')) {
+            reader.onload = (e) => {
+                const text = e.target?.result as string;
+                const lines = text.split(/\r?\n/);
+                const h = lines[0].split(',').map(c => c.replace(/"/g, '').trim());
+                setHeaders(h);
+                setRawRows(lines.slice(1).map(l => l.split(',')));
+                setShowMapping(true);
+            };
+            reader.readAsText(f);
+        } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
+                if (json.length > 0) {
+                    setHeaders(json[0].map(h => String(h)));
+                    setRawRows(json.slice(1));
+                    setShowMapping(true);
+                }
+            };
+            reader.readAsArrayBuffer(f);
         }
     }, []);
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            handleFiles(Array.from(e.target.files));
-        }
-    };
-
-    const handleFiles = (files: File[]) => {
+    const handleFiles = useCallback((files: File[]) => {
         const docTransactions: Transaction[] = [];
         let dataFile: File | null = null;
 
@@ -83,35 +99,19 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
         if (dataFile) {
             processDataFile(dataFile);
         }
-    };
+    }, [documentType, onUpload, processDataFile]);
 
-    const processDataFile = (f: File) => {
-        const reader = new FileReader();
-        const name = f.name.toLowerCase();
+    const handleDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files.length > 0) {
+            handleFiles(Array.from(e.dataTransfer.files));
+        }
+    }, [handleFiles]);
 
-        if (name.endsWith('.csv')) {
-            reader.onload = (e) => {
-                const text = e.target?.result as string;
-                const lines = text.split(/\r?\n/);
-                const h = lines[0].split(',').map(c => c.replace(/"/g, '').trim());
-                setHeaders(h);
-                setRawRows(lines.slice(1).map(l => l.split(',')));
-                setShowMapping(true);
-            };
-            reader.readAsText(f);
-        } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
-                if (json.length > 0) {
-                    setHeaders(json[0].map(h => String(h)));
-                    setRawRows(json.slice(1));
-                    setShowMapping(true);
-                }
-            };
-            reader.readAsArrayBuffer(f);
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handleFiles(Array.from(e.target.files));
         }
     };
 
@@ -137,7 +137,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
             }
 
             // Only add if valid
-            const dateObj = new Date(dateVal);
+            const dateObj = new Date(dateVal as string);
             if (!isNaN(dateObj.getTime()) && !isNaN(amount)) {
                 transactions.push({
                     id: `txn_${idx}`,
@@ -173,7 +173,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
         setShowMapping(false); // Close
     };
 
-    const parseVal = (v: any) => {
+    const parseVal = (v: unknown) => {
         if (typeof v === 'number') return v;
         if (!v) return 0;
         return parseFloat(String(v).replace(/[^\d.-]/g, '')) || 0;
@@ -186,7 +186,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Document Type</label>
                 <select
                     value={documentType}
-                    onChange={(e) => setDocumentType(e.target.value as any)}
+                    onChange={(e) => setDocumentType(e.target.value as 'BANK_STATEMENT' | 'RECEIPT' | 'INVOICE' | 'OTHER')}
                     style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                 >
                     <option value="BANK_STATEMENT">Bank Statement</option>

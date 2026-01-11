@@ -7,29 +7,55 @@ interface SmartLedgerProps {
     onNavigate?: (view: string) => void;
 }
 
+import { autoCategorize, CATEGORY_RULES } from '../engine/autoCat';
+
 export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerProps) {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [filter, setFilter] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [dateFilter, setDateFilter] = useState('');
 
-    // ... existing logic ... (kept safe)
-    // Bulk Action Handler
-    const handleBulkAction = (action: string, payload?: any) => {
-        if (selectedIds.size === 0) return;
-
+    // Auto-Categorize Handler
+    const handleAutoCategorize = () => {
         const updated = transactions.map(t => {
-            if (selectedIds.has(t.id)) {
-                if (action === 'categorize') return { ...t, category_name: payload };
-                if (action === 'tag') return { ...t, tax_tag: payload };
-                if (action === 'exclude') return { ...t, excluded_from_tax: true };
+            // Only auto-categorize if it's currently uncategorized (or simple override logic)
+            // For safety, let's only touch "Uncategorized" items unless specific override requested
+            if (t.category_name?.startsWith('Uncategorized')) {
+                const newCat = autoCategorize(t.description);
+                if (newCat) return { ...t, category_name: newCat };
             }
             return t;
         });
-        onUpdate(updated);
-        setSelectedIds(new Set()); // Clear selection
+
+        // Calculate how many changed
+        const changedCount = updated.filter((t, i) => t.category_name !== transactions[i].category_name).length;
+        if (changedCount > 0) {
+            onUpdate(updated);
+            alert(`✨ Auto-categorized ${changedCount} transactions!`);
+        } else {
+            alert("No matching categories found for uncategorized items.");
+        }
     };
 
+    // Bulk Action Handler (Unused for now)
+    // const handleBulkAction = (action: string, payload?: any) => {
+    /*
+    if (selectedIds.size === 0) return;
+
+    const updated = transactions.map(t => {
+        if (selectedIds.has(t.id)) {
+            if (action === 'categorize') return { ...t, category_name: payload };
+            if (action === 'tag') return { ...t, tax_tag: payload };
+            if (action === 'exclude') return { ...t, excluded_from_tax: true };
+        }
+        return t;
+    });
+    onUpdate(updated);
+    setSelectedIds(new Set()); // Clear selection
+    */
+    // };
+
     // Inline Update
-    const handleRowUpdate = (id: string, field: keyof Transaction, value: any) => {
+    const handleRowUpdate = (id: string, field: keyof Transaction, value: Transaction[keyof Transaction]) => {
         const updated = transactions.map(t => t.id === id ? { ...t, [field]: value } : t);
         onUpdate(updated);
     };
@@ -68,18 +94,55 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
         }
     };
 
-
     // Preview Modal
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     // Filtering
-    const filteredTxns = transactions.filter(t =>
-        t.description.toLowerCase().includes(filter.toLowerCase()) ||
-        t.category_name?.toLowerCase().includes(filter.toLowerCase())
-    );
+    const filteredTransactions = transactions.filter(t => {
+        const term = searchTerm.toLowerCase();
+        const matchesSearch =
+            (searchTerm === 'uncategorized' && !t.category_name) ||
+            t.description.toLowerCase().includes(term) ||
+            t.category_name?.toLowerCase().includes(term) ||
+            (t.amount.toString().includes(term));
+
+        // Simple date match if dateFilter is set
+        const matchesDate = !dateFilter ? true : new Date(t.date).toISOString().split('T')[0] === dateFilter;
+
+        return matchesSearch && matchesDate;
+    });
+
+    const uncategorizedCount = transactions.filter(t => !t.category_name).length;
 
     return (
         <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+            {/* Validation Banner */}
+            {uncategorizedCount > 0 && (
+                <div style={{
+                    margin: '1rem',
+                    padding: '1rem',
+                    background: '#fee2e2',
+                    border: '1px solid #ef4444',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    color: '#991b1b'
+                }}>
+                    <div style={{ fontSize: '1.5rem' }}>🔴</div>
+                    <div>
+                        <div style={{ fontWeight: 'bold' }}>Action Items Pending</div>
+                        <div style={{ fontSize: '0.9rem' }}>
+                            You have <strong>{uncategorizedCount} transactions</strong> without a category.
+                            These must be categorized before you can generate your Filing Pack.
+                            <span style={{ marginLeft: '0.5rem', fontSize: '0.8rem', textDecoration: 'underline', cursor: 'pointer' }} onClick={() => setSearchTerm('uncategorized')}>
+                                Filter Uncategorized
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Toolbar */}
             <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
@@ -87,32 +150,33 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                     <input
                         type="text"
                         placeholder="Search transactions..."
-                        value={filter}
-                        onChange={e => setFilter(e.target.value)}
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
                         style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', width: '250px' }}
                     />
+                    <input
+                        type="date"
+                        value={dateFilter}
+                        onChange={e => setDateFilter(e.target.value)}
+                        style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    />
+                    <button
+                        onClick={handleAutoCategorize}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            boxShadow: '0 2px 4px rgba(99, 102, 241, 0.3)'
+                        }}
+                    >
+                        ✨ Magic Auto-Cat
+                    </button>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <button
-                        disabled={selectedIds.size === 0}
-                        onClick={() => handleBulkAction('exclude')}
-                        style={{ padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: 'white', cursor: selectedIds.size ? 'pointer' : 'not-allowed', color: selectedIds.size ? '#334155' : '#cbd5e1' }}
-                    >
-                        🚫 Exclude
-                    </button>
-                    <select
-                        disabled={selectedIds.size === 0}
-                        onChange={(e) => handleBulkAction('tag', e.target.value)}
-                        style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: 'white', cursor: selectedIds.size ? 'pointer' : 'not-allowed' }}
-                        value=""
-                    >
-                        <option value="" disabled>🏷️ Bulk Tag...</option>
-                        <option value="VAT">VAT</option>
-                        <option value="WHT">WHT</option>
-                        <option value="Non-deductible">Non-deductible</option>
-                        <option value="Owner Loan">Owner Loan</option>
-                    </select>
-
                     {onNavigate && (
                         <button
                             onClick={() => onNavigate('analysis_pl')}
@@ -127,6 +191,7 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
             {/* Table */}
             <div style={{ overflowX: 'auto', flex: 1 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    {/* ... thead ... */}
                     <thead style={{ position: 'sticky', top: 0, background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', zIndex: 10 }}>
                         <tr style={{ textAlign: 'left', color: '#64748b' }}>
                             <th style={{ padding: '0.75rem', borderBottom: '2px solid #e2e8f0', width: '40px' }}><input type="checkbox" checked={selectedIds.size === transactions.length && transactions.length > 0} onChange={toggleSelectAll} /></th>
@@ -142,8 +207,9 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredTxns.map(t => {
+                        {filteredTransactions.map(t => {
                             const isSelected = selectedIds.has(t.id);
+                            // ... existing row render ...
                             return (
                                 <tr key={t.id} style={{ background: isSelected ? '#f0f9ff' : 'white', borderBottom: '1px solid #f1f5f9' }}>
                                     <td style={{ padding: '0.75rem' }}><input type="checkbox" checked={isSelected} onChange={() => toggleSelect(t.id)} /></td>
@@ -219,12 +285,12 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                                         >
                                             <option value="Uncategorized Income">Uncategorized Income</option>
                                             <option value="Uncategorized Expense">Uncategorized Expense</option>
+                                            {Object.keys(CATEGORY_RULES).map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
                                             <option value="Sales">Sales</option>
                                             <option value="Consulting">Consulting</option>
-                                            <option value="Rent">Rent</option>
                                             <option value="Salaries">Salaries</option>
-                                            <option value="Store Supplies">Store Supplies</option>
-                                            <option value="Utilities">Utilities</option>
                                             <option value="Bank Charges">Bank Charges</option>
                                         </select>
                                     </td>
@@ -285,20 +351,22 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
             </div>
 
             {/* Preview Modal */}
-            {previewUrl && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-                    <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', width: '90%', height: '90%', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0 }}>Document Preview</h3>
-                            <button onClick={() => setPreviewUrl(null)} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
-                        </div>
-                        <div style={{ flex: 1, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                            <iframe src={previewUrl} style={{ width: '100%', height: '100%', border: 'none' }} title="Document Preview" />
+            {
+                previewUrl && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+                        <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', width: '90%', height: '90%', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ margin: 0 }}>Document Preview</h3>
+                                <button onClick={() => setPreviewUrl(null)} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+                            </div>
+                            <div style={{ flex: 1, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                <iframe src={previewUrl} style={{ width: '100%', height: '100%', border: 'none' }} title="Document Preview" />
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-        </div>
+        </div >
     );
 }

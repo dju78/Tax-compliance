@@ -1,6 +1,6 @@
 import { generateExcelWorkbook } from '../engine/excel';
 import { generatePDFReport } from '../engine/reports';
-import type { Transaction, StatementSummary, FilingChecklist } from '../engine/types';
+import type { Transaction, StatementSummary, FilingChecklist, FilingChecks } from '../engine/types';
 import type { PitInput } from '../engine/pit';
 import type { CitInput } from '../engine/cit';
 import type { VatInput } from '../engine/vat';
@@ -11,17 +11,40 @@ interface FilingPackProps {
     pitInput: PitInput;
     citInput: CitInput;
     vatInput: VatInput;
-    checklist: FilingChecklist;
+    checklist: FilingChecklist; // kept for compatibility but not primary driver
+    filingChecks: FilingChecks;
+    onFilingChecksChange: (checks: FilingChecks | ((prev: FilingChecks) => FilingChecks)) => void;
     onChecklistChange: (checklist: FilingChecklist | ((prev: FilingChecklist) => FilingChecklist)) => void;
     onNavigate: (view: string) => void;
 }
 
-export function FilingPack({ transactions, summary, pitInput, citInput, vatInput, checklist, onChecklistChange, onNavigate }: FilingPackProps) {
-    // Local state removed, using props
+export function FilingPack({ transactions, summary, pitInput, citInput, vatInput, checklist, filingChecks, onFilingChecksChange, onChecklistChange, onNavigate }: FilingPackProps) {
 
-    const allChecked = Object.values(checklist).every(Boolean);
+    // Readiness Logic
+    const uncategorizedCount = transactions.filter(t => !t.category_id).length;
+
+    // Manual checks from persistent storage
+    const isChecksComplete = filingChecks.bank_reconciled && filingChecks.expenses_reviewed;
+
+    let readinessStatus: 'RED' | 'AMBER' | 'GREEN' = 'GREEN';
+    if (uncategorizedCount > 0) {
+        readinessStatus = 'RED';
+    } else if (!isChecksComplete) {
+        readinessStatus = 'AMBER';
+    }
+
+    const isBlocked = readinessStatus === 'RED';
+    const isAmberBlock = readinessStatus === 'AMBER';
 
     const handleDownloadPdf = () => {
+        if (isBlocked) {
+            alert("Cannot export filing pack while critical red flags exist. Please categorize all transactions.");
+            return;
+        }
+        if (isAmberBlock) {
+            alert("Cannot export FINAL filing pack until all manual checks are confirmed. You can only preview.");
+            return;
+        }
         // Collect all data for the full report
         const reportData = {
             type: 'SUMMARY' as const,
@@ -34,74 +57,46 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
         generatePDFReport(reportData);
     };
 
-    const handleDownloadExcel = () => {
-        generateExcelWorkbook(transactions);
+    // ...
+
+    const toggleCheck = (key: keyof FilingChecks) => {
+        if (key === 'company_id' || key === 'updated_at' || key === 'tax_year_label') return;
+        onFilingChecksChange(prev => ({
+            ...prev,
+            [key]: !prev[key],
+            updated_at: new Date()
+        }));
     };
 
-    const handleSaveForAccountant = () => {
-        alert("Pack saved! Your accountant can now access this snapshot.");
-    };
+    // ...
 
-    const toggleCheck = (key: keyof FilingChecklist) => {
-        onChecklistChange(prev => ({ ...prev, [key]: !prev[key] }));
-    };
-
-    return (
-        <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#1e293b' }}>Filing Pack & Submission Prep</h2>
-                <p style={{ color: '#64748b' }}>Prepare your final documents for the tax year. Ensure all checks are complete before exporting.</p>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
-
-                {/* Left Column: Checklist & Actions */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-
-                    {/* Checklist Card */}
-                    <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '1rem', color: '#334155' }}>Readiness Checklist</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <CheckItem
                                 label="Income Reconciled with Bank Statement"
-                                checked={checklist.incomeReconciled}
-                                onChange={() => toggleCheck('incomeReconciled')}
+                                checked={filingChecks.bank_reconciled}
+                                onChange={() => toggleCheck('bank_reconciled')}
                             />
                             <CheckItem
-                                label="Expenses Reviewed & Non-Deductibles Tagged"
-                                checked={checklist.expensesReviewed}
-                                onChange={() => toggleCheck('expensesReviewed')}
+                                label={`Expenses Reviewed (${uncategorizedCount} Uncategorized)`}
+                                checked={filingChecks.expenses_reviewed}
+                                onChange={() => toggleCheck('expenses_reviewed')}
                             />
-                            <CheckItem
-                                label="VAT Input/Output Reconciled"
-                                checked={checklist.vatReconciled}
-                                onChange={() => toggleCheck('vatReconciled')}
-                            />
-                            <CheckItem
-                                label="PAYE Credits Applied (if applicable)"
-                                checked={checklist.payeCredits}
-                                onChange={() => toggleCheck('payeCredits')}
-                            />
-                        </div>
-                    </div>
+    {/* Deprecated Checks Visuals but keeping simpler UI */ }
 
-                    {/* Actions Area */}
-                    <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '1rem', color: '#334155' }}>Export & Filing Actions</h3>
+    // ...
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <ActionButton
-                                label="Download Filing Summary (PDF)"
+                                label={isAmberBlock ? "Download Draft Preview" : "Download Filing Summary (PDF)"}
                                 icon="📄"
                                 onClick={handleDownloadPdf}
-                                disabled={!allChecked}
+                                disabled={isBlocked} 
                                 primary
                             />
                             <ActionButton
                                 label="Export Full Excel Pack"
                                 icon="📊"
                                 onClick={handleDownloadExcel}
-                                disabled={false}
+                                disabled={isBlocked}
                             />
                             <ActionButton
                                 label="Generate Dividend Voucher"
@@ -114,46 +109,28 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
                         <div style={{ marginTop: '1rem' }}>
                             <button
                                 onClick={handleSaveForAccountant}
-                                disabled={!allChecked}
+                                disabled={isBlocked || readinessStatus === 'AMBER'}
                                 style={{
                                     width: '100%',
                                     padding: '1rem',
-                                    background: allChecked ? '#0f172a' : '#cbd5e1',
+                                    background: (isBlocked || readinessStatus === 'AMBER') ? '#cbd5e1' : '#0f172a',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '8px',
                                     fontWeight: 'bold',
-                                    cursor: allChecked ? 'pointer' : 'not-allowed',
+                                    cursor: (isBlocked || readinessStatus === 'AMBER') ? 'not-allowed' : 'pointer',
                                     display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem'
                                 }}
                             >
                                 <span>🔐</span> Save Snapshot for Accountant
                             </button>
-                            {!allChecked && <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.5rem' }}>Complete checklist to unlock filing actions</div>}
                         </div>
-                    </div>
+                    </div >
 
-                </div>
+                </div >
 
-                {/* Right Column: Assumptions & Info */}
-                <div>
-                    <div style={{ background: '#fffbeb', padding: '1.5rem', borderRadius: '12px', border: '1px solid #fcd34d' }}>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.75rem', color: '#92400e' }}>📌 Important Assumptions</h3>
-                        <ul style={{ paddingLeft: '1.2rem', fontSize: '0.9rem', color: '#92400e', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <li><strong>Estimates Only:</strong> Figures are based on provided logic and may not cover all complex edge cases.</li>
-                            <li><strong>No Prior Payments:</strong> Computations assume no WHT credits or earlier installments paid unless explicitly entered.</li>
-                            <li><strong>Finance Act 2025:</strong> Rules applied are based on the latest Finance Act provisions including rent relief caps.</li>
-                        </ul>
-                    </div>
-
-                    <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: '8px', background: '#eff6ff', border: '1px solid #dbeafe', fontSize: '0.9rem', color: '#1e40af' }}>
-                        <strong>Need Help?</strong><br />
-                        If you are unsure about any item, please consult a chartered tax practitioner before filing.
-                    </div>
-                </div>
-
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
 

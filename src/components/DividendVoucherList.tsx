@@ -13,30 +13,30 @@ export function DividendVoucherList({ companyId, onCreate, onEdit }: DividendVou
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const fetchVouchers = async () => {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('dividend_vouchers')
+                .select('*')
+                .eq('company_id', companyId)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching vouchers:', error);
+            } else {
+                // Parse dates and match type
+                const parsed = (data || []).map((d: Record<string, unknown>) => ({
+                    ...d,
+                    date_of_payment: new Date(d.date_of_payment as string),
+                    // lines is already json (array)
+                })) as DividendVoucher[];
+                setVouchers(parsed);
+            }
+            setLoading(false);
+        };
+
         fetchVouchers();
     }, [companyId]);
-
-    const fetchVouchers = async () => {
-        setLoading(true);
-        const { data, error } = await supabase
-            .from('dividend_vouchers')
-            .select('*')
-            .eq('company_id', companyId)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching vouchers:', error);
-        } else {
-            // Parse dates and match type
-            const parsed = (data || []).map((d: any) => ({
-                ...d,
-                date_of_payment: new Date(d.date_of_payment),
-                // lines is already json (array)
-            })) as DividendVoucher[];
-            setVouchers(parsed);
-        }
-        setLoading(false);
-    };
 
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this voucher? This cannot be undone.')) return;

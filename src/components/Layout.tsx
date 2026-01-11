@@ -39,29 +39,7 @@ export function Layout({
         )
     })).filter(section => section.content.length > 0);
 
-    const NavItem = ({ view, label, icon }: { view: string, label: string, icon: string }) => (
-        <button
-            onClick={() => onNavigate(view)}
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.75rem 1rem',
-                border: 'none',
-                background: activeView === view ? '#e0f2fe' : 'transparent',
-                color: activeView === view ? '#0284c7' : '#64748b',
-                width: '100%',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: activeView === view ? '600' : '400',
-                marginBottom: '0.25rem',
-                textAlign: 'left'
-            }}
-        >
-            <span>{icon}</span>
-            {sidebarOpen && <span>{label}</span>}
-        </button>
-    );
+
 
     return (
         <div style={{ display: 'flex', height: '100vh', fontFamily: 'Inter, sans-serif' }}>
@@ -86,22 +64,22 @@ export function Layout({
                 </div>
 
                 <nav style={{ flex: 1, padding: '1.5rem 1rem', overflowY: 'auto' }}>
-                    <NavItem view="dashboard" label="Dashboard" icon="📊" />
-                    <NavItem view="upload" label="Upload Data" icon="📁" />
-                    <NavItem view="transactions" label="Transactions" icon="💳" />
+                    <NavItem view="dashboard" label="Dashboard" icon="📊" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
+                    <NavItem view="upload" label="Upload Data" icon="📁" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
+                    <NavItem view="transactions" label="Transactions" icon="💳" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
 
                     <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>Analysis</div>
-                    <NavItem view="analysis_pl" label="Analysis" icon="📈" />
+                    <NavItem view="analysis_pl" label="Analysis" icon="📈" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
 
                     <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>Compliance</div>
-                    <NavItem view="tax_cit" label="Tax Computation" icon="calculator" />
-                    <NavItem view="filing_pack" label="Filing Pack" icon="📦" />
-                    <NavItem view="reports" label="Reports" icon="📑" />
-                    <NavItem view="dividend_vouchers" label="Dividend Vouchers" icon="📜" />
-                    <NavItem view="expense_checklist" label="Expense Checklist" icon="✅" />
+                    <NavItem view="tax_cit" label="Tax Computation" icon="calculator" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
+                    <NavItem view="filing_pack" label="Filing Pack" icon="📦" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
+                    <NavItem view="reports" label="Reports" icon="📑" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
+                    <NavItem view="dividend_vouchers" label="Dividend Vouchers" icon="📜" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
+                    <NavItem view="expense_checklist" label="Expense Checklist" icon="✅" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
 
                     <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>System</div>
-                    <NavItem view="settings" label="Settings" icon="⚙️" />
+                    <NavItem view="settings" label="Settings" icon="⚙️" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
 
                     <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <button
@@ -339,5 +317,31 @@ export function Layout({
                 </main>
             </div>
         </div>
+    );
+}
+
+function NavItem({ view, label, icon, activeView, sidebarOpen, onNavigate }: { view: string, label: string, icon: string, activeView: string, sidebarOpen: boolean, onNavigate: (v: string) => void }) {
+    return (
+        <button
+            onClick={() => onNavigate(view)}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.75rem 1rem',
+                border: 'none',
+                background: activeView === view ? '#e0f2fe' : 'transparent',
+                color: activeView === view ? '#0284c7' : '#64748b',
+                width: '100%',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: activeView === view ? '600' : '400',
+                marginBottom: '0.25rem',
+                textAlign: 'left'
+            }}
+        >
+            <span>{icon}</span>
+            {sidebarOpen && <span>{label}</span>}
+        </button>
     );
 }

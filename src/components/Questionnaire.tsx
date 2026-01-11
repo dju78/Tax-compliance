@@ -3,19 +3,19 @@ import type { QuestionnaireFlow } from '../engine/questionnaire';
 
 interface Props {
     flow: QuestionnaireFlow;
-    onComplete: (answers: Record<string, any>) => void;
+    onComplete: (answers: Record<string, unknown>) => void;
     onCancel: () => void;
 }
 
 export function Questionnaire({ flow, onComplete, onCancel }: Props) {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [answers, setAnswers] = useState<Record<string, any>>({});
+    const [answers, setAnswers] = useState<Record<string, unknown>>({});
 
     // Filter questions based on conditions
     const activeQuestions = flow.questions.filter(q => !q.condition || q.condition(answers));
     const currentQuestion = activeQuestions[currentIndex];
 
-    const handleAnswer = (value: any) => {
+    const handleAnswer = (value: unknown) => {
         const newAnswers = { ...answers, [currentQuestion.id]: value };
         setAnswers(newAnswers);
     };
@@ -74,7 +74,7 @@ export function Questionnaire({ flow, onComplete, onCancel }: Props) {
                                 border: '2px solid var(--color-primary-light)',
                                 background: 'rgba(255,255,255,0.8)'
                             }}
-                            value={answers[currentQuestion.id] || ''}
+                            value={(answers[currentQuestion.id] as string | number) || ''}
                             onChange={(e) => handleAnswer(Number(e.target.value))}
                             onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                         />

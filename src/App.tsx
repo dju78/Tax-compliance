@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { Auth } from './components/Auth';
-import type { Transaction, StatementSummary, Company, FilingChecklist } from './engine/types';
+import type { Transaction, StatementSummary, Company, FilingChecklist, FilingChecks } from './engine/types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { UploadZone } from './components/UploadZone';
@@ -14,9 +14,10 @@ import { TaxCIT } from './components/TaxCIT';
 import { TaxVAT } from './components/TaxVAT';
 import { Reports } from './components/Reports';
 import { FilingPack } from './components/FilingPack';
-import { Settings } from './components/Settings'; // New
+import { Settings } from './components/Settings';
+import { autoCategorize } from './engine/autoCat';
 
-// Engine
+import { type AuditInputs } from './engine/auditRisk';
 import type { PitInput } from './engine/pit';
 import { type CitInput } from './engine/cit';
 import { type VatInput } from './engine/vat';
@@ -25,9 +26,33 @@ import { DividendVoucherList } from './components/DividendVoucherList';
 import { DividendVoucherForm } from './components/DividendVoucherForm';
 import { ExpenseChecklist } from './components/ExpenseChecklist';
 
+// ... inside App function
+interface CompanySession {
+  company: Company;
+  statementData: { transactions: Transaction[], summary: StatementSummary } | null;
+  pitInput: PitInput;
+  citInput: CitInput;
+  vatInput: VatInput;
+  checklist: FilingChecklist;
+  filingChecks: FilingChecks; // New
+  expenseChecklist: AuditInputs;
+}
+
+// Defaults
+const defaultFilingChecks: FilingChecks = {
+  company_id: '',
+  tax_year_label: '2025',
+  bank_reconciled: false,
+  expenses_reviewed: false,
+  updated_at: new Date()
+};
+
+// ...
+
 
 // Multi-Company State
 function App() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
@@ -40,12 +65,25 @@ function App() {
     citInput: CitInput;
     vatInput: VatInput;
     checklist: FilingChecklist;
+    filingChecks: FilingChecks;
+    expenseChecklist: AuditInputs;
   }
 
   const defaultPit: PitInput = { gross_income: 5000000, allowable_deductions: 500000, non_taxable_income: 0, actual_rent_paid: 1000000 };
   const defaultCit: CitInput = { turnover: 120000000, assessable_profit: 30000000 };
   const defaultVat: VatInput = { output_vat: 75000, input_vat: 25000, is_registered: true };
   const defaultChecklist: FilingChecklist = { incomeReconciled: false, expensesReviewed: false, vatReconciled: false, payeCredits: false };
+  const defaultExpenseChecklist: AuditInputs = {
+    type: 'SOLE',
+    turnover: 0,
+    selectedItems: [],
+    receiptMissing: false,
+    noSeparateAccount: false,
+    cashOver500k: false,
+    noWHT: false,
+    repeatedLosses: false,
+    suddenSpike: false
+  };
 
   const [activeCompanyId, setActiveCompanyId] = useState<string>('default');
   const [sessions, setSessions] = useState<Record<string, CompanySession>>({
@@ -56,6 +94,8 @@ function App() {
       citInput: defaultCit,
       vatInput: defaultVat,
       checklist: defaultChecklist,
+      filingChecks: { ...defaultFilingChecks, company_id: 'default' },
+      expenseChecklist: defaultExpenseChecklist
     },
     'personal': {
       company: { id: 'personal', name: 'Personal Accounts' },
@@ -64,6 +104,8 @@ function App() {
       citInput: defaultCit,
       vatInput: defaultVat,
       checklist: defaultChecklist,
+      filingChecks: { ...defaultFilingChecks, company_id: 'personal' },
+      expenseChecklist: defaultExpenseChecklist
     }
   });
 
@@ -80,6 +122,37 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Persistence
+  useEffect(() => {
+    const saved = localStorage.getItem('deap_sessions');
+    if (saved) {
+      try {
+        const dateFields = ['date', 'period_start', 'period_end', 'date_of_payment', 'created_at', 'opening_balance_date'];
+        const parsed = JSON.parse(saved, (key, value) => {
+          if (typeof value === 'string' && dateFields.includes(key)) {
+            // Simple validation to check if it looks like a date
+            if (/^\d{4}-\d{2}-\d{2}/.test(value)) return new Date(value);
+          }
+          return value;
+        });
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSessions(parsed);
+      } catch (e) {
+        console.error("Failed to load sessions", e);
+      }
+    }
+    const savedActive = localStorage.getItem('deap_active_id');
+    if (savedActive) setActiveCompanyId(savedActive);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('deap_sessions', JSON.stringify(sessions));
+  }, [sessions]);
+
+  useEffect(() => {
+    localStorage.setItem('deap_active_id', activeCompanyId);
+  }, [activeCompanyId]);
 
   if (loading) {
     return (
@@ -123,7 +196,14 @@ function App() {
   const setChecklist = (input: FilingChecklist | ((prev: FilingChecklist) => FilingChecklist)) =>
     updateSession(s => ({ ...s, checklist: typeof input === 'function' ? input(s.checklist) : input }));
 
+  const setExpenseChecklist = (input: AuditInputs | ((prev: AuditInputs) => AuditInputs)) =>
+    updateSession(s => ({ ...s, expenseChecklist: typeof input === 'function' ? input(s.expenseChecklist) : input }));
 
+  const setFilingChecks = (input: FilingChecks | ((prev: FilingChecks) => FilingChecks)) =>
+    updateSession(s => ({ ...s, filingChecks: typeof input === 'function' ? input(s.filingChecks) : input }));
+
+
+  // ...
 
   const handleAddCompany = () => {
     const name = prompt("Enter new company name:");
@@ -132,12 +212,14 @@ function App() {
     setSessions(prev => ({
       ...prev,
       [id]: {
-        company: { id, name },
+        company: { id, name, created_at: new Date(), entity_type: 'sole_trader' },
         statementData: null,
         pitInput: defaultPit,
         citInput: defaultCit,
         vatInput: defaultVat,
         checklist: defaultChecklist,
+        filingChecks: { ...defaultFilingChecks, company_id: id },
+        expenseChecklist: defaultExpenseChecklist,
       }
     }));
     setActiveCompanyId(id);
@@ -145,8 +227,12 @@ function App() {
   };
 
   const handleStatementUpload = (data: { transactions: Transaction[], summary: StatementSummary }) => {
-    // Inject company_id into transactions
-    const taggedTransactions = data.transactions.map(t => ({ ...t, company_id: activeCompanyId }));
+    // Inject company_id into transactions & auto-categorize
+    const taggedTransactions = data.transactions.map(t => ({
+      ...t,
+      company_id: activeCompanyId,
+      category_name: autoCategorize(t.description) || t.category_name
+    }));
 
     updateSession(s => {
       const existingTxns = s.statementData?.transactions || [];
@@ -254,8 +340,8 @@ function App() {
       case 'analysis_tax_year': return statementData ? <TaxYearSplit transactions={statementData.transactions} /> : <NoDataFallback />;
       case 'analysis_dla': return statementData ? <DirectorLoanAccount transactions={statementData.transactions} onNavigate={setActiveView} /> : <NoDataFallback />;
 
-      case 'tax_pit': return <TaxPIT transactions={statementData?.transactions || []} savedInput={pitInput} onSave={setPitInput} onNavigate={setActiveView} />;
-      case 'tax_cit': return <TaxCIT transactions={statementData?.transactions || []} savedInput={citInput} onSave={setCitInput} onNavigate={setActiveView} />;
+      case 'tax_pit': return <TaxPIT transactions={statementData?.transactions || []} savedInput={pitInput} onSave={setPitInput} onNavigate={setActiveView} expenseChecklist={activeSession.expenseChecklist} />;
+      case 'tax_cit': return <TaxCIT transactions={statementData?.transactions || []} savedInput={citInput} onSave={setCitInput} onNavigate={setActiveView} expenseChecklist={activeSession.expenseChecklist} />;
       case 'tax_vat': return <TaxVAT transactions={statementData?.transactions || []} savedInput={vatInput} onSave={setVatInput} onNavigate={setActiveView} />;
 
       case 'dividend_vouchers':
@@ -298,6 +384,8 @@ function App() {
             citInput={citInput}
             vatInput={vatInput}
             checklist={checklist}
+            filingChecks={activeSession.filingChecks}
+            onFilingChecksChange={setFilingChecks}
             onChecklistChange={setChecklist}
             onNavigate={setActiveView}
           />
@@ -310,7 +398,12 @@ function App() {
         />;
 
       case 'expense_checklist':
-        return <ExpenseChecklist />;
+        return (
+          <ExpenseChecklist
+            data={activeSession.expenseChecklist}
+            onChange={setExpenseChecklist}
+          />
+        );
 
       default: return <div>Under Construction</div>;
     }

@@ -20,24 +20,20 @@ export function DirectorLoanAccount({ transactions, onNavigate }: DirectorLoanPr
             t.dla_status === 'confirmed'
         ).sort((a, b) => a.date.getTime() - b.date.getTime());
 
-        let balance = 0; // Positive = Company Owes Director. Negative = Director Owes Company.
-
-        return filtered.map(t => {
-            // Inflow to Company (Money In) = Director Lending to Company = Credit Balance
-            // Outflow from Company (Money Out) = Company Repaying/Lending to Director = Debit Balance
-
+        return filtered.reduce((acc, t) => {
             const credit = t.amount > 0 ? t.amount : 0;
             const debit = t.amount < 0 ? Math.abs(t.amount) : 0;
+            const previousBalance = acc.length > 0 ? acc[acc.length - 1].runningBalance : 0;
+            const runningBalance = previousBalance + (credit - debit);
 
-            balance += (credit - debit);
-
-            return {
+            acc.push({
                 ...t,
                 credit,
                 debit,
-                runningBalance: balance
-            };
-        });
+                runningBalance
+            });
+            return acc;
+        }, [] as (Transaction & { credit: number; debit: number; runningBalance: number })[]);
     }, [transactions]);
 
     const currentBalance = dlaData.length > 0 ? dlaData[dlaData.length - 1].runningBalance : 0;
