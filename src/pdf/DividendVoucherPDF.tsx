@@ -132,7 +132,7 @@ export function DividendVoucherPDF({ voucher, company }: DividendVoucherPDFProps
                 <View style={styles.header}>
                     <Text style={styles.companyName}>{company.name}</Text>
                     <Text>{company.address || 'Registered Office Address not set'}</Text>
-                    <Text>Reg No: {company.reg_number || 'N/A'}</Text>
+                    <Text>Reg No: {company.rc_number || 'N/A'}</Text>
                 </View>
 
                 <Text style={styles.title}>Dividend Voucher</Text>

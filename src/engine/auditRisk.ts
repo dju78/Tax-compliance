@@ -17,6 +17,7 @@ export interface AuditInputs {
     marketingTotal?: number;
     directorRemuneration?: number;
     phoneInternetTotal?: number; // Sole specific
+    isReviewed?: boolean;
 }
 
 export interface AuditResult {

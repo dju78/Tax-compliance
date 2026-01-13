@@ -1,7 +1,12 @@
-import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
 import { EXPENSE_CHECKLIST_SOLE, EXPENSE_CHECKLIST_LTD } from '../data/expenseChecklists';
-import { calculateAuditRisk, type AuditInputs } from '../engine/auditRisk';
+import { calculateDetailedRisk } from '../engine/riskAnalysis';
+import type { AuditInputs } from '../engine/auditRisk';
 import { AuditRiskReport } from './AuditRiskReport';
+import { generateExpenseRiskReportHTML } from '../engine/riskReport';
+import { TaxSavings } from './TaxSavings';
+import { YearComparison } from './YearComparison';
 
 interface ExpenseChecklistProps {
     data: AuditInputs;
@@ -9,6 +14,14 @@ interface ExpenseChecklistProps {
 }
 
 export function ExpenseChecklist({ data, onChange }: ExpenseChecklistProps) {
+    const navigate = useNavigate();
+    // Local state for extended inputs not yet in global AuditInputs
+    // ideally should be in AuditInputs but for now we keep local or extend
+    const [lastYearTurnover, setLastYearTurnover] = useState(0);
+    const [lastYearExpenses, setLastYearExpenses] = useState(0);
+
+    if (!data) return <div style={{ padding: '2rem', color: '#64748b' }}>Initializing compliance data...</div>;
+
     const checklist = data.type === 'SOLE' ? EXPENSE_CHECKLIST_SOLE : EXPENSE_CHECKLIST_LTD;
 
     const updateField = (field: keyof AuditInputs, value: unknown) => {
@@ -26,8 +39,15 @@ export function ExpenseChecklist({ data, onChange }: ExpenseChecklistProps) {
     };
 
     const auditResult = useMemo(() => {
-        return calculateAuditRisk(data, checklist);
-    }, [data, checklist]);
+        // Mocking categoryAmounts and receipts for now as they aren't fully implemented in AuditInputs
+        // In a full implementation, these would come from 'data'
+        return calculateDetailedRisk(
+            data,
+            {}, // categoryAmounts
+            {}, // receipts
+            lastYearExpenses
+        );
+    }, [data, lastYearExpenses]);
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -87,6 +107,15 @@ export function ExpenseChecklist({ data, onChange }: ExpenseChecklistProps) {
                                     <input type="number" value={data.profit || ''} onChange={(e) => updateField('profit', Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                                 </div>
                             )}
+
+                            <div>
+                                <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.25rem' }}>Last Year Turnover</label>
+                                <input type="number" value={lastYearTurnover || ''} onChange={(e) => setLastYearTurnover(Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.25rem' }}>Last Year Expenses</label>
+                                <input type="number" value={lastYearExpenses || ''} onChange={(e) => setLastYearExpenses(Number(e.target.value))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                            </div>
 
                             {/* Specific Category Totals for Ratio Checks */}
                             <div>
@@ -200,6 +229,47 @@ export function ExpenseChecklist({ data, onChange }: ExpenseChecklistProps) {
                             <li>Encourages voluntary compliance.</li>
                             <li>Reduces likelihood of aggressive expense inflation.</li>
                         </ul>
+                    </div>
+
+                    <TaxSavings
+                        turnover={data.turnover || 0}
+                        totalExpenses={data.totalExpenses || 0}
+                        businessType={data.type === 'SOLE' ? 'SOLE' : 'LTD'}
+                    />
+
+                    <YearComparison
+                        currentExpenses={data.totalExpenses || 0}
+                        lastYearExpenses={lastYearExpenses}
+                        currentTurnover={data.turnover || 0}
+                        lastYearTurnover={lastYearTurnover}
+                    />
+
+                    <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <button
+                            onClick={() => generateExpenseRiskReportHTML(auditResult, data, lastYearExpenses)}
+                            style={{
+                                width: '100%', padding: '0.75rem', background: 'white', color: '#166534', border: '1px solid #166534',
+                                borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+                            }}
+                        >
+                            <span>📄</span> Download Report (HTML)
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                updateField('isReviewed', true);
+                                navigate(-1);
+                            }}
+                            style={{
+                                width: '100%', padding: '1rem', background: '#166534', color: 'white', border: 'none',
+                                borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                boxShadow: '0 4px 6px -1px rgba(22, 101, 52, 0.2)'
+                            }}
+                        >
+                            <span style={{ fontSize: '1.2rem' }}>✅</span> Confirm & Complete Audit
+                        </button>
                     </div>
                 </div>
             </div>

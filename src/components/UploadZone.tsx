@@ -1,26 +1,102 @@
 import { useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
+import { supabase } from '../supabase';
+import { autoCategorize, CATEGORY_RULES } from '../engine/autoCat';
 import type { Transaction, StatementSummary } from '../engine/types';
 
 interface UploadZoneProps {
     onUpload: (data: { transactions: Transaction[], summary: StatementSummary }) => void;
+    companyId: string;
+    isPersonal: boolean;
 }
 
-export function UploadZone({ onUpload }: UploadZoneProps) {
+export function UploadZone({ onUpload, companyId, isPersonal }: UploadZoneProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [showMapping, setShowMapping] = useState(false);
     const [headers, setHeaders] = useState<string[]>([]);
     const [rawRows, setRawRows] = useState<unknown[][]>([]);
 
-    const [documentType, setDocumentType] = useState<'BANK_STATEMENT' | 'RECEIPT' | 'INVOICE' | 'OTHER'>('BANK_STATEMENT');
+    const [showReview, setShowReview] = useState(false);
+    const [reviewTransactions, setReviewTransactions] = useState<Transaction[]>([]);
+
+    const [documentType, setDocumentType] = useState<'BANK_UPLOAD' | 'RECEIPT' | 'MANUAL' | 'OTHER'>('BANK_UPLOAD');
 
     const [mapping, setMapping] = useState({
         date: '',
         description: '',
+        category: '',
         amount: '',     // for signed
         moneyIn: '',    // for split
         moneyOut: ''    // for split
     });
+
+    const handleFinalizeUpload = async () => {
+        const transactions = reviewTransactions;
+
+        // 1. Prepare DB Payload
+        // 1. Prepare DB Payload
+        const dbPayload = transactions.map(t => ({
+            company_id: isPersonal ? null : companyId,
+            personal_profile_id: isPersonal ? companyId : null,
+            txn_date: new Date(t.date).toISOString(), // Map to DB column
+            description: t.description,
+            amount: t.amount,
+            category_name: t.category_name,
+            dla_status: t.dla_status,
+            tax_tag: t.tax_tag || 'None',
+            source_type: t.source_type,
+            vat_status: 'none', // Default
+            include_in_pit: isPersonal,
+            include_in_cit: !isPersonal
+        }));
+
+        try {
+            // 2. Insert to Supabase
+            const { data, error } = await supabase
+                .from('transactions')
+                .insert(dbPayload)
+                .select(); // Get back real IDs
+
+            if (error) throw error;
+            if (!data) throw new Error("No data returned from insert");
+
+            // 3. Map back to UI Model
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const savedTransactions = data.map((row: any) => ({
+                id: row.id,
+                company_id: row.company_id || 'default',
+                date: new Date(row.txn_date || row.date), // Handle return from DB
+                description: row.description,
+                amount: row.amount,
+                dla_status: row.dla_status,
+                tax_tag: row.tax_tag,
+                tax_year_label: new Date(row.date).getFullYear().toString(),
+                category_name: row.category_name,
+                source_type: row.source_type
+            } as Transaction));
+
+            const total_inflow = savedTransactions.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
+            const total_outflow = savedTransactions.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
+
+            onUpload({
+                transactions: savedTransactions,
+                summary: {
+                    total_inflow,
+                    total_outflow,
+                    net_cash_flow: total_inflow - total_outflow,
+                    transaction_count: savedTransactions.length,
+                    period_start: savedTransactions[0]?.date ? new Date(savedTransactions[0].date) : new Date(),
+                    period_end: savedTransactions[savedTransactions.length - 1]?.date ? new Date(savedTransactions[savedTransactions.length - 1].date) : new Date()
+                }
+            });
+            setShowReview(false);
+            alert("Transactions saved to database successfully!");
+
+        } catch (err) {
+            console.error("Upload failed:", err);
+            alert("Failed to save transactions. Please try again.");
+        }
+    };
 
     const processDataFile = useCallback((f: File) => {
         const reader = new FileReader();
@@ -69,7 +145,6 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                     date: new Date(),
                     description: `Document Upload: ${f.name}`,
                     amount: 0,
-                    is_business: true,
                     dla_status: 'none',
                     tax_year_label: new Date().getFullYear().toString(),
                     category_name: 'Uncategorized Expense',
@@ -136,6 +211,16 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                 else amount = Math.abs(credit);
             }
 
+            // Apply Auto-Cat if no category mapped
+            let catName = String(row[headers.indexOf(mapping.category)] || '');
+            if (!catName && descVal) {
+                const auto = autoCategorize(String(descVal));
+                if (auto) catName = auto;
+            }
+            if (!catName) {
+                catName = amount > 0 ? 'Uncategorized Income' : 'Uncategorized Expense';
+            }
+
             // Only add if valid
             const dateObj = new Date(dateVal as string);
             if (!isNaN(dateObj.getTime()) && !isNaN(amount)) {
@@ -145,33 +230,21 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                     date: dateObj,
                     description: String(descVal || ''),
                     amount: amount,
-                    is_business: true,
-                    dla_status: 'none',
+                    dla_status: (catName?.toLowerCase().includes('director') || catName?.toLowerCase().includes('loan') || String(descVal).toLowerCase().includes('director')) ? 'potential' : 'none',
+                    tax_tag: (catName?.toLowerCase().includes('director') || catName?.toLowerCase().includes('loan')) ? 'Owner Loan' : undefined,
                     tax_year_label: dateObj.getFullYear().toString(),
-                    category_name: amount > 0 ? 'Uncategorized Income' : 'Uncategorized Expense',
+                    category_name: catName,
                     source_type: documentType
                 });
             }
         });
 
-        // Calc Summary
-        const total_inflow = transactions.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
-        const total_outflow = transactions.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
-
-        onUpload({
-            transactions,
-            summary: {
-                total_inflow,
-                total_outflow,
-                net_cash_flow: total_inflow - total_outflow,
-                transaction_count: transactions.length,
-                period_start: transactions[0]?.date,
-                period_end: transactions[transactions.length - 1]?.date
-            }
-        });
-
-        setShowMapping(false); // Close
+        setReviewTransactions(transactions);
+        setShowMapping(false);
+        setShowReview(true);
     };
+
+
 
     const parseVal = (v: unknown) => {
         if (typeof v === 'number') return v;
@@ -186,12 +259,12 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Document Type</label>
                 <select
                     value={documentType}
-                    onChange={(e) => setDocumentType(e.target.value as 'BANK_STATEMENT' | 'RECEIPT' | 'INVOICE' | 'OTHER')}
+                    onChange={(e) => setDocumentType(e.target.value as 'BANK_UPLOAD' | 'RECEIPT' | 'MANUAL' | 'OTHER')}
                     style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                 >
-                    <option value="BANK_STATEMENT">Bank Statement</option>
+                    <option value="BANK_UPLOAD">Bank Statement (Upload)</option>
                     <option value="RECEIPT">Receipt</option>
-                    <option value="INVOICE">Invoice</option>
+                    <option value="MANUAL">Manual Entry / Invoice</option>
                     <option value="OTHER">Other</option>
                 </select>
             </div>
@@ -231,6 +304,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                             <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
                                 <MappingRow label="Date" options={headers} value={mapping.date} onChange={v => setMapping({ ...mapping, date: v })} />
                                 <MappingRow label="Description" options={headers} value={mapping.description} onChange={v => setMapping({ ...mapping, description: v })} />
+                                <MappingRow label="Category" options={headers} value={mapping.category} onChange={v => setMapping({ ...mapping, category: v })} />
 
                                 <div style={{ borderTop: '1px solid #eee', margin: '0.5rem 0' }}></div>
 
@@ -251,6 +325,93 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
                                 >
                                     Confirm Mapping
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Review Modal */
+                showReview && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+                    }}>
+                        <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', width: '900px', maxWidth: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.5rem' }}>Review Import</h3>
+                                    <p style={{ margin: '0.5rem 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>Review and categorize your transactions before finalizing.</p>
+                                </div>
+                                <div style={{ textAlign: 'right', fontSize: '0.9rem', color: '#64748b' }}>
+                                    {reviewTransactions.length} transactions found
+                                </div>
+                            </div>
+
+                            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                    <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                        <tr>
+                                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Date</th>
+                                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Description</th>
+                                            <th style={{ padding: '0.75rem', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Amount</th>
+                                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Category</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {reviewTransactions.map((t, i) => (
+                                            <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                <td style={{ padding: '0.75rem', color: '#64748b' }}>{new Date(t.date).toLocaleDateString()}</td>
+                                                <td style={{ padding: '0.75rem', fontWeight: '500' }}>{t.description}</td>
+                                                <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: '600', color: t.amount > 0 ? '#166534' : '#b91c1c' }}>
+                                                    {t.amount.toLocaleString()}
+                                                </td>
+                                                <td style={{ padding: '0.5rem' }}>
+                                                    <select
+                                                        value={t.category_name}
+                                                        onChange={(e) => {
+                                                            const newVal = e.target.value;
+                                                            setReviewTransactions(prev => {
+                                                                const copy = [...prev];
+                                                                copy[i] = { ...copy[i], category_name: newVal };
+                                                                return copy;
+                                                            });
+                                                        }}
+                                                        style={{
+                                                            width: '100%', padding: '0.4rem', borderRadius: '4px',
+                                                            border: t.category_name?.startsWith('Uncategorized') ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                                                            background: t.category_name?.startsWith('Uncategorized') ? '#fef2f2' : 'white',
+                                                            fontSize: '0.85rem'
+                                                        }}
+                                                    >
+                                                        <optgroup label="System">
+                                                            <option value="Uncategorized Income">Uncategorized Income</option>
+                                                            <option value="Uncategorized Expense">Uncategorized Expense</option>
+                                                        </optgroup>
+                                                        {Object.entries(CATEGORY_RULES).map(([cat]) => (
+                                                            <option key={cat} value={cat}>{cat}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ fontSize: '0.9rem', color: '#ef4444' }}>
+                                    {reviewTransactions.filter(t => t.category_name?.startsWith('Uncategorized')).length} items still uncategorized
+                                </div>
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button onClick={() => setShowReview(false)} style={{ padding: '0.75rem 1.5rem', border: 'none', background: '#f1f5f9', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+                                    <button
+                                        onClick={handleFinalizeUpload}
+                                        style={{ background: '#166534', color: 'white', padding: '0.75rem 2rem', borderRadius: '6px', border: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                    >
+                                        <span>✅</span> Complete Import
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

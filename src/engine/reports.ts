@@ -3,6 +3,8 @@ import autoTable from 'jspdf-autotable';
 import type { PitResult, PitInput } from './pit';
 import type { CitResult, CitInput } from './cit';
 import type { VatResult, VatInput } from './vat';
+import type { CgtResult, CgtInput } from './cgt'; // Note: Only Types here, calculateCGT for Excel
+import type { WhtInput } from './wht';
 import type { StatementSummary } from './types';
 
 // Extend jsPDF type to include autoTable
@@ -14,12 +16,15 @@ interface ReportData {
     type: 'PIT' | 'CIT' | 'VAT' | 'SUMMARY';
     pitResult?: PitResult;
     citResult?: CitResult;
+    cgtResult?: CgtResult;
     vatResult?: VatResult;
     statementSummary?: StatementSummary;
     date: Date;
     // For SUMMARY
     pit?: PitInput;
     cit?: CitInput;
+    cgt?: CgtInput;
+    wht?: WhtInput;
     vat?: VatInput;
 }
 
@@ -75,6 +80,8 @@ export function generatePDFReport(data: ReportData) {
         const summaryBody = [];
         if (data.pit) summaryBody.push(['PIT (Personal Income Tax)', `Gross: N${data.pit.gross_income.toLocaleString()}`]);
         if (data.cit) summaryBody.push(['CIT (Company Income Tax)', `Profit: N${data.cit.assessable_profit.toLocaleString()}`]);
+        if (data.cgt) summaryBody.push(['CGT (Capital Gains Tax)', `Gain: N${data.cgt.gain_amount.toLocaleString()}`]);
+        if (data.wht) summaryBody.push(['WHT (Withholding Tax)', `Payable: N${data.wht.wht_payable.toLocaleString()} | Credit: N${data.wht.wht_receivable.toLocaleString()}`]);
         if (data.vat) summaryBody.push(['VAT (Value Added Tax)', `Net: N${(data.vat.output_vat - data.vat.input_vat).toLocaleString()}`]);
 
         autoTable(doc, {
@@ -134,4 +141,118 @@ export function generatePDFReport(data: ReportData) {
 
     // Save
     doc.save(`${data.type}_Assessment_Report.pdf`);
+}
+
+import * as XLSX from 'xlsx';
+import type { Transaction } from './types';
+import { calculateCIT } from './cit';
+import { calculateCGT } from './cgt';
+
+interface ExcelData {
+    transactions: Transaction[];
+    summary: StatementSummary;
+    pit: PitInput;
+    cit: CitInput;
+    cgt: CgtInput;
+    wht: WhtInput;
+    vat: VatInput;
+}
+
+export function generateExcelWorkbook(data: ExcelData) {
+    const wb = XLSX.utils.book_new();
+    const citResult = calculateCIT(data.cit);
+    const cgtResult = calculateCGT(data.cgt);
+    const vatPayable = data.vat.output_vat - data.vat.input_vat;
+
+    // Sheet 1: Executive Summary
+    const summaryData = [
+        ["DEAP Tax Filing Pack", ""],
+        ["Generated Date", new Date().toLocaleDateString()],
+        ["", ""],
+        ["Financial Summary", ""],
+        ["Total Inflow", data.summary.total_inflow],
+        ["Total Outflow", data.summary.total_outflow],
+        ["Net Cash Flow", data.summary.net_cash_flow],
+        ["Transaction Count", data.summary.transaction_count],
+        ["", ""],
+        ["CIT Computation", ""],
+        ["Turnover", data.cit.turnover],
+        ["Assessable Profit", data.cit.assessable_profit],
+        ["Total CIT Payable", citResult.tax_payable],
+        ["", ""],
+        ["CGT Computation", ""],
+        ["Total Gain", data.cgt.gain_amount],
+        ["CGT Payable", cgtResult.tax_payable],
+        ["", ""],
+        ["", ""],
+        ["WHT Position", ""],
+        ["WHT Payable (Liability)", data.wht.wht_payable],
+        ["WHT Credit (Asset)", data.wht.wht_receivable],
+        ["", ""],
+        ["VAT Return", ""],
+        ["Total VAT Due", vatPayable]
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    // Sheet 2: Transactions
+    const txnData = data.transactions.map(t => ({
+        Date: new Date(t.date).toLocaleDateString(),
+        Description: t.description,
+        Amount: t.amount,
+        Category: t.category_name || 'Uncategorized',
+        "Tax Tag": t.tax_tag || 'None',
+        "Source": t.source_type || 'Manual'
+    }));
+    const wsTxns = XLSX.utils.json_to_sheet(txnData);
+    XLSX.utils.book_append_sheet(wb, wsTxns, "Transactions");
+
+    // Sheet 3: CIT Details
+    const citData = [
+        ["Field", "Value"],
+        ["Turnover", data.cit.turnover],
+        ["Assessable Profit", data.cit.assessable_profit],
+        ["Category", citResult.category],
+        ["CIT Rate", `${citResult.tax_rate * 100}%`],
+        ["Total CIT Payable", citResult.tax_payable]
+    ];
+    const wsCit = XLSX.utils.aoa_to_sheet(citData);
+    XLSX.utils.book_append_sheet(wb, wsCit, "CIT Computation");
+
+    // Sheet 4: CGT Details
+    const cgtData = [
+        ["Field", "Value"],
+        ["Entity Type", data.cgt.entity_type],
+        ["Turnover (Ref)", data.cgt.turnover],
+        ["Total Gain Amount", data.cgt.gain_amount],
+        ["Rate Applied", cgtResult.rate_description],
+        ["CGT Payable", cgtResult.tax_payable]
+    ];
+    const wsCgt = XLSX.utils.aoa_to_sheet(cgtData);
+    XLSX.utils.book_append_sheet(wb, wsCgt, "CGT Computation");
+
+    // Sheet 5: VAT Details
+    const vatData = [
+        ["Field", "Value"],
+        ["Sales (Vatable Estimate)", data.vat.output_vat / 0.075],
+        ["Output VAT", data.vat.output_vat],
+        ["Purchases (Vatable Estimate)", data.vat.input_vat / 0.075],
+        ["Input VAT", data.vat.input_vat],
+        ["Net VAT Payable", vatPayable]
+    ];
+    const wsVat = XLSX.utils.aoa_to_sheet(vatData);
+    XLSX.utils.book_append_sheet(wb, wsVat, "VAT Return");
+
+    // Sheet 6: WHT Schedule
+    const whtData = [
+        ["Field", "Value"],
+        ["Total WHT Payable (Liability)", data.wht.wht_payable],
+        ["Total WHT Receivable (Notes)", data.wht.wht_receivable],
+        ["Notes / Breakdown", data.wht.notes || '']
+    ];
+    const wsWht = XLSX.utils.aoa_to_sheet(whtData);
+    XLSX.utils.book_append_sheet(wb, wsWht, "WHT Schedule");
+
+    // Save File
+    XLSX.writeFile(wb, `DEAP_Filing_Pack_${new Date().toISOString().split('T')[0]}.xlsx`);
 }

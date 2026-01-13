@@ -1,27 +1,36 @@
-import { generateExcelWorkbook } from '../engine/excel';
-import { generatePDFReport } from '../engine/reports';
+import { generatePDFReport, generateExcelWorkbook } from '../engine/reports';
 import type { Transaction, StatementSummary, FilingChecklist, FilingChecks } from '../engine/types';
 import type { PitInput } from '../engine/pit';
 import type { CitInput } from '../engine/cit';
+import type { CgtInput } from '../engine/cgt';
+import type { WhtInput } from '../engine/wht';
 import type { VatInput } from '../engine/vat';
+
+import type { AuditInputs } from '../engine/auditRisk';
 
 interface FilingPackProps {
     transactions: Transaction[];
-    summary: StatementSummary;
+    summary: StatementSummary | null;
     pitInput: PitInput;
     citInput: CitInput;
+
+    cgtInput: CgtInput;
+    whtInput: WhtInput;
     vatInput: VatInput;
-    checklist: FilingChecklist; // kept for compatibility but not primary driver
     filingChecks: FilingChecks;
+    expenseChecklist?: AuditInputs;
+    checklist: FilingChecklist; // kept for compatibility but not primary driver
     onFilingChecksChange: (checks: FilingChecks | ((prev: FilingChecks) => FilingChecks)) => void;
-    onChecklistChange: (checklist: FilingChecklist | ((prev: FilingChecklist) => FilingChecklist)) => void;
     onNavigate: (view: string) => void;
 }
 
-export function FilingPack({ transactions, summary, pitInput, citInput, vatInput, checklist, filingChecks, onFilingChecksChange, onChecklistChange, onNavigate }: FilingPackProps) {
+export function FilingPack({ transactions, summary, pitInput, citInput, cgtInput, whtInput, vatInput, filingChecks, expenseChecklist, onFilingChecksChange, onNavigate }: FilingPackProps) {
 
     // Readiness Logic
-    const uncategorizedCount = transactions.filter(t => !t.category_id).length;
+    const uncategorizedCount = transactions.filter(t => !t.category_name || t.category_name.startsWith('Uncategorized')).length;
+
+    // Checklist Audit Status
+    const auditStatus = expenseChecklist && expenseChecklist.isReviewed ? 'REVIEWED' : 'PENDING';
 
     // Manual checks from persistent storage
     const isChecksComplete = filingChecks.bank_reconciled && filingChecks.expenses_reviewed;
@@ -29,7 +38,7 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
     let readinessStatus: 'RED' | 'AMBER' | 'GREEN' = 'GREEN';
     if (uncategorizedCount > 0) {
         readinessStatus = 'RED';
-    } else if (!isChecksComplete) {
+    } else if (!isChecksComplete || auditStatus === 'PENDING') {
         readinessStatus = 'AMBER';
     }
 
@@ -51,6 +60,9 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
             summary,
             pit: pitInput,
             cit: citInput,
+
+            cgt: cgtInput,
+            wht: whtInput,
             vat: vatInput,
             date: new Date()
         };
@@ -62,15 +74,16 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
             alert("Cannot export excel pack while critical red flags exist.");
             return;
         }
-        /*  const workbook = generateExcelWorkbook({
-             transactions,
-             summary,
-             pit: pitInput,
-             cit: citInput,
-             vat: vatInput
-         }); */
-        // Excel download logic would go here
-        alert("Excel export not yet implemented in this delta.");
+        generateExcelWorkbook({
+            transactions,
+            summary: summary!,
+            pit: pitInput,
+            cit: citInput,
+            cgt: cgtInput,
+
+            wht: whtInput,
+            vat: vatInput
+        });
     };
 
     const handleSaveForAccountant = () => {
@@ -96,23 +109,32 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
                 borderRadius: '12px',
                 background: readinessStatus === 'GREEN' ? '#dcfce7' : (readinessStatus === 'AMBER' ? '#fef3c7' : '#fee2e2'),
                 border: `2px solid ${readinessStatus === 'GREEN' ? '#22c55e' : (readinessStatus === 'AMBER' ? '#f59e0b' : '#ef4444')}`,
-                display: 'flex', alignItems: 'center', gap: '1.5rem'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1.5rem'
             }}>
-                <div style={{ fontSize: '3rem' }}>
+                <span style={{ fontSize: '2.5rem' }}>
                     {readinessStatus === 'GREEN' ? '✅' : (readinessStatus === 'AMBER' ? '⚠️' : '🛑')}
-                </div>
+                </span>
                 <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '0.5rem' }}>
+                    <h2 style={{
+                        fontSize: '1.4rem',
+                        fontWeight: 'bold',
+                        color: readinessStatus === 'GREEN' ? '#166534' : (readinessStatus === 'AMBER' ? '#b45309' : '#b91c1c'),
+                        marginBottom: '0.25rem'
+                    }}>
                         Filing Status: {readinessStatus}
                     </h2>
-                    <p style={{ color: '#334155' }}>
-                        {readinessStatus === 'GREEN'
-                            ? "All systems go. Your filing pack is ready for export."
-                            : (readinessStatus === 'AMBER'
-                                ? "Manual checks incomplete. You can preview the draft, but final export is blocked."
-                                : `${uncategorizedCount} Uncategorized transactions found. Action required.`
-                            )
-                        }
+                    <p style={{ color: readinessStatus === 'GREEN' ? '#15803d' : (readinessStatus === 'AMBER' ? '#92400e' : '#991b1b') }}>
+                        {readinessStatus === 'RED' && "Critical issues found. You must categorize all transactions before proceeding."}
+                        {readinessStatus === 'GREEN' && "All checks passed. You are ready to export the final filing pack."}
+                        {readinessStatus === 'AMBER' && (
+                            <span>
+                                Not ready yet.
+                                {auditStatus === 'PENDING' && <strong> Please click "Expense Audit Pending" below to complete the audit.</strong>}
+                                {(auditStatus !== 'PENDING' && !isChecksComplete) && <strong> Please tick the green checkboxes below to confirm readiness.</strong>}
+                            </span>
+                        )}
                     </p>
                 </div>
             </div>
@@ -131,9 +153,14 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
                                 onChange={() => toggleCheck('bank_reconciled')}
                             />
                             <CheckItem
+                                checked={filingChecks.expenses_reviewed && uncategorizedCount === 0}
                                 label={`Expenses Reviewed (${uncategorizedCount} Uncategorized)`}
-                                checked={filingChecks.expenses_reviewed}
-                                onChange={() => toggleCheck('expenses_reviewed')}
+                                onChange={() => onFilingChecksChange(prev => ({ ...prev, expenses_reviewed: !prev.expenses_reviewed }))}
+                            />
+                            <CheckItem
+                                checked={expenseChecklist ? !!expenseChecklist.isReviewed : false}
+                                label={expenseChecklist && expenseChecklist.isReviewed ? "Disallowable Expenses Audited" : "Expense Audit Pending"}
+                                onChange={() => onNavigate && onNavigate('expense_checklist')}
                             />
                         </div>
                     </div>
@@ -189,12 +216,20 @@ export function FilingPack({ transactions, summary, pitInput, citInput, vatInput
                 {/* Right Column: Assumptions & Info */}
                 <div>
                     <div style={{ background: '#fffbeb', padding: '1.5rem', borderRadius: '12px', border: '1px solid #fcd34d' }}>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.75rem', color: '#92400e' }}>📌 Important Assumptions</h3>
-                        <ul style={{ paddingLeft: '1.2rem', fontSize: '0.9rem', color: '#92400e', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <li><strong>Management Representation:</strong> By exporting this pack, management confirms that all expenses claimed are wholly, reasonably, and exclusively for business purposes.</li>
-                            <li><strong>Audit Readiness:</strong> The user acknowledges that supporting documentation (receipts/invoices) must be available for all claimed deductions upon FIRS request.</li>
-                            <li><strong>Regulatory Basis:</strong> Computations are based on the Finance Act 2024/2025 provisions. Tax authorities may interpret specific provisions differently.</li>
-                        </ul>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem', color: '#92400e' }}>📌 Simple Guidelines</h3>
+                        <div style={{ fontSize: '0.9rem', color: '#92400e' }}>
+                            <p style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: '#166534' }}>👍 Do:</p>
+                            <ul style={{ paddingLeft: '1.2rem', marginBottom: '1rem' }}>
+                                <li><strong>Keep your receipts:</strong> FIRS may ask for evidence of your expenses.</li>
+                                <li><strong>Review carefully:</strong> Ensure all transactions are actually for the business.</li>
+                            </ul>
+
+                            <p style={{ fontWeight: 'bold', marginBottom: '0.25rem', color: '#b91c1c' }}>👎 Do Not:</p>
+                            <ul style={{ paddingLeft: '1.2rem' }}>
+                                <li><strong>Mix personal costs:</strong> Do not include family expenses or personal rent.</li>
+                                <li><strong>Hide income:</strong> All business earnings must be declared to avoid penalties.</li>
+                            </ul>
+                        </div>
                     </div>
 
                     <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: '8px', background: '#eff6ff', border: '1px solid #dbeafe', fontSize: '0.9rem', color: '#1e40af' }}>

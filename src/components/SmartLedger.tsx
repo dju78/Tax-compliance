@@ -5,11 +5,13 @@ interface SmartLedgerProps {
     transactions: Transaction[];
     onUpdate: (updated: Transaction[]) => void;
     onNavigate?: (view: string) => void;
+    onSave?: (txn: Transaction) => void;
+    onSaveBulk?: (txns: Transaction[]) => void;
 }
 
 import { autoCategorize, CATEGORY_RULES } from '../engine/autoCat';
 
-export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerProps) {
+export function SmartLedger({ transactions, onUpdate, onNavigate, onSave, onSaveBulk }: SmartLedgerProps) {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     const [dateFilter, setDateFilter] = useState('');
@@ -27,10 +29,11 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
         });
 
         // Calculate how many changed
-        const changedCount = updated.filter((t, i) => t.category_name !== transactions[i].category_name).length;
-        if (changedCount > 0) {
+        const changed = updated.filter((t, i) => t.category_name !== transactions[i].category_name);
+        if (changed.length > 0) {
             onUpdate(updated);
-            alert(`✨ Auto-categorized ${changedCount} transactions!`);
+            onSaveBulk?.(changed);
+            alert(`✨ Auto-categorized ${changed.length} transactions!`);
         } else {
             alert("No matching categories found for uncategorized items.");
         }
@@ -56,8 +59,14 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
 
     // Inline Update
     const handleRowUpdate = (id: string, field: keyof Transaction, value: Transaction[keyof Transaction]) => {
-        const updated = transactions.map(t => t.id === id ? { ...t, [field]: value } : t);
+        const original = transactions.find(t => t.id === id);
+        if (!original) return;
+
+        const updatedTxn = { ...original, [field]: value };
+        const updated = transactions.map(t => t.id === id ? updatedTxn : t);
+
         onUpdate(updated);
+        onSave?.(updatedTxn);
     };
 
     // Selection
@@ -80,6 +89,7 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
             case 'WHT': return '#fef3c7'; // amber-100
             case 'Non-deductible': return '#fee2e2'; // red-100
             case 'Owner Loan': return '#dcfce7'; // green-100
+            case 'Capital Gain': return '#fce7f3'; // pink-100
             default: return '#f1f5f9';
         }
     };
@@ -90,6 +100,7 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
             case 'WHT': return '#b45309';
             case 'Non-deductible': return '#b91c1c';
             case 'Owner Loan': return '#15803d';
+            case 'Capital Gain': return '#db2777';
             default: return '#64748b';
         }
     };
@@ -112,7 +123,7 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
         return matchesSearch && matchesDate;
     });
 
-    const uncategorizedCount = transactions.filter(t => !t.category_name).length;
+    const uncategorizedCount = transactions.filter(t => !t.category_name || t.category_name.startsWith('Uncategorized')).length;
 
     return (
         <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -330,6 +341,7 @@ export function SmartLedger({ transactions, onUpdate, onNavigate }: SmartLedgerP
                                             <option value="WHT">WHT</option>
                                             <option value="Non-deductible">Non-deductible</option>
                                             <option value="Owner Loan">Owner Loan</option>
+                                            <option value="Capital Gain">Capital Gain</option>
                                         </select>
                                     </td>
 

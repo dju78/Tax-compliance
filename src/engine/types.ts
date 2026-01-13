@@ -1,63 +1,65 @@
 // DEAP Compliance: Signed Amounts (+ Income, - Expense)
 
 export interface Transaction {
-    id: string;
-    company_id: string;      // Multi-tenancy support
-    date: Date;
+    id: string; // UUID
+
+    // Scoping (One must be set)
+    company_id?: string;
+    personal_profile_id?: string;
+
+    date: Date | string; // Supabase returns string dates
     description: string;
-    amount: number;          // Signed: >0 (Income/Funding), <0 (Expense/Repayment)
-    type?: 'credit' | 'debit'; // Legacy/Display support
-    category?: string;       // Legacy/Display support
+    amount: number;
 
     // Categorization
-    category_id?: string;
-    category_name?: string; // Cache for display
+    category_name?: string;
+    sub_category?: string;
 
-    // Tax Year Mapping
-    tax_year_id?: string;
-    tax_year_label?: string; // e.g. "2025"
-
-    // Director's Loan Account (DLA) Tags
+    // Tax Attributes
+    tax_year_label?: string; // "2025"
+    tax_tag?: 'VAT' | 'WHT' | 'Non-deductible' | 'Owner Loan' | 'Capital Gain' | 'None';
     dla_status: 'none' | 'potential' | 'confirmed';
-    dla_owner_id?: string;
-    dla_type?: 'funding' | 'repayment' | 'personal_expense_paid_by_company' | 'company_expense_paid_by_owner';
-
-    // Meta
-    is_business: boolean;
     excluded_from_tax?: boolean;
 
-    // Enhanced Ledger Fields
-    sub_category?: string;
-    tax_tag?: 'VAT' | 'WHT' | 'Non-deductible' | 'Owner Loan' | 'None';
+    // Meta
+    source_type?: 'BANK_UPLOAD' | 'RECEIPT' | 'MANUAL' | 'OTHER';
+    created_at?: string;
+    preview_url?: string; // For receipt images/PDFs
     notes?: string;
-    source_type?: 'BANK_STATEMENT' | 'RECEIPT' | 'INVOICE' | 'OTHER'; // Added for upload source tracking
-    preview_url?: string; // Blob URL for document preview
+
+    // Legacy/Display support (Frontend only props)
+    type?: 'credit' | 'debit';
 }
 
-export interface Owner {
+export interface PersonalProfile {
     id: string;
-    company_id: string;
-    full_name: string;
-    role: 'Owner' | 'Director' | 'Partner';
-    opening_balance: number; // (+) Company Owes Owner, (-) Owner Owes Company
-    opening_balance_date: Date;
+    user_id: string;
+    name: string; // Changed from full_name to name to match DB
+    tin?: string;
+    state_of_residence?: string;
+    nin?: string;
+    created_at?: string;
 }
 
-export interface Category {
+export interface Company {
     id: string;
+    user_id: string; // Owner
     name: string;
-    type: 'income' | 'expense' | 'cogs' | 'other_income';
-    is_system?: boolean;
+    tin?: string;
+    rc_number?: string;
+    sector?: string;
+    entity_type: 'sole_trader' | 'ltd' | 'partnership';
+    description?: string; // Frontend optional
+    email?: string;
+    phone?: string;
+    address?: string;
+    nin?: string;
+    profile_type?: 'individual' | 'business'; // Mapped to entity_type logic usually
+    business_type?: string;
+    created_at?: string;
 }
 
-export interface TaxYear {
-    id: string;
-    label: string;
-    start_date: Date;
-    end_date: Date;
-    is_default: boolean;
-}
-
+// ... Keep existing aggregated types (StatementSummary, etc) for UI logic ..
 export interface StatementSummary {
     total_inflow: number;
     total_outflow: number;
@@ -67,25 +69,6 @@ export interface StatementSummary {
     period_end?: Date;
 }
 
-export interface Company {
-    id: string;
-    name: string;
-    sector?: string;
-    description?: string;
-    reg_number?: string; // Legacy field, might map to rc_number
-    rc_number?: string;
-    address?: string;
-    tin?: string;
-    email?: string; // Added based on Settings.tsx usage
-    phone?: string;
-
-    // New fields
-    profile_type?: 'individual' | 'business';
-    nin?: string;
-    business_type?: string;
-    created_at?: Date;
-    entity_type?: 'sole_trader' | 'ltd';
-}
 
 export interface FilingChecks {
     company_id: string; // redundant but good for safety

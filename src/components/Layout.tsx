@@ -1,43 +1,62 @@
 import { useState } from 'react';
 import type { Company } from '../engine/types';
-import { HELP_CONTENT } from '../data/helpContent';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
     children: React.ReactNode;
-    activeView: string;
-    onNavigate: (view: string) => void;
+    mode: 'personal' | 'business';
     activeCompanyId?: string;
     companies?: Company[];
     onSwitchCompany?: (id: string) => void;
     onAddCompany?: () => void;
     onLogout?: () => void;
+    onSwitchMode: (mode: 'personal' | 'business') => void;
 }
 
 export function Layout({
     children,
-    activeView,
-    onNavigate,
+    mode,
     activeCompanyId,
     companies = [],
     onSwitchCompany,
     onAddCompany,
-    onLogout
+    onLogout,
+    onSwitchMode
 }: LayoutProps) {
+    const navigate = useNavigate();
+    const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [notificationOpen, setNotificationOpen] = useState(false);
-    const [helpOpen, setHelpOpen] = useState(false);
-    const [hasUnread, setHasUnread] = useState(true); // New state for notification badge
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedHelpSection, setSelectedHelpSection] = useState<string | null>(null);
+    const [showNotifications, setShowNotifications] = useState(false);
+    // Navigation Helper
+    const handleNavigate = (view: string) => {
+        // Map "view" names to Routes based on Mode
+        if (mode === 'personal') {
+            if (view === 'dashboard') navigate('/personal/dashboard');
+            else if (view === 'upload') navigate('/personal/upload');
+            else if (view === 'transactions') navigate('/personal/transactions');
+            else if (view === 'tax_pit') navigate('/personal/tax/pit');
+            else if (view === 'filing_pack') navigate('/personal/filing');
+            else if (view === 'settings') navigate('/personal/settings');
+            else if (view === 'help') navigate('/personal/help');
+        } else {
+            // Business Mode
+            const prefix = `/companies/${activeCompanyId}`;
+            if (view === 'dashboard') navigate(`${prefix}/dashboard`);
+            else if (view === 'upload') navigate(`${prefix}/upload`);
+            else if (view === 'transactions') navigate(`${prefix}/transactions`);
+            else if (view === 'tax_cit') navigate(`${prefix}/tax/cit`);
+            else if (view === 'tax_vat') navigate(`${prefix}/tax/vat`);
+            else if (view === 'tax_wht') navigate(`${prefix}/tax/wht`);
+            else if (view === 'tax_cgt') navigate(`${prefix}/tax/cgt`);
+            else if (view === 'filing_pack') navigate(`${prefix}/filing`);
+            else if (view === 'analysis_pl') navigate(`${prefix}/analysis`);
+            else if (view === 'dividend_vouchers') navigate(`${prefix}/dividends`);
+            else if (view === 'expense_checklist') navigate(`${prefix}/compliance`);
+            else if (view === 'settings') navigate(`${prefix}/settings`);
+            else if (view === 'help') navigate(`${prefix}/help`);
+        }
 
-    // Filter Help Content
-    const filteredHelp = HELP_CONTENT.map(section => ({
-        ...section,
-        content: section.content.filter(article =>
-            article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            article.keywords.some(k => k.toLowerCase().includes(searchTerm.toLowerCase()))
-        )
-    })).filter(section => section.content.length > 0);
+    };
 
 
 
@@ -64,26 +83,57 @@ export function Layout({
                 </div>
 
                 <nav style={{ flex: 1, padding: '1.5rem 1rem', overflowY: 'auto' }}>
-                    <NavItem view="dashboard" label="Dashboard" icon="📊" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
-                    <NavItem view="upload" label="Upload Data" icon="📁" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
-                    <NavItem view="transactions" label="Transactions" icon="💳" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
 
-                    <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>Analysis</div>
-                    <NavItem view="analysis_pl" label="Analysis" icon="📈" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
+                    {/* Common Items */}
+                    <NavItem label="Dashboard" icon="📊" active={location.pathname.includes('dashboard')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('dashboard')} />
+                    <NavItem label="Upload Data" icon="📁" active={location.pathname.includes('upload')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('upload')} />
+                    <NavItem label="Transactions" icon="💳" active={location.pathname.includes('transactions')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('transactions')} />
 
-                    <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>Compliance</div>
-                    <NavItem view="tax_cit" label="Tax Computation" icon="calculator" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
-                    <NavItem view="filing_pack" label="Filing Pack" icon="📦" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
-                    <NavItem view="reports" label="Reports" icon="📑" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
-                    <NavItem view="dividend_vouchers" label="Dividend Vouchers" icon="📜" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
-                    <NavItem view="expense_checklist" label="Expense Checklist" icon="✅" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
+                    <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>
+                        {mode === 'personal' ? 'Personal Finance' : 'Business Finance'}
+                    </div>
+
+                    {mode === 'personal' ? (
+                        <>
+                            {/* Personal Specific */}
+                            <NavItem label="PIT Computation" icon="🧮" active={location.pathname.includes('tax/pit')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_pit')} />
+                            <NavItem label="WHT (Withholding)" icon="📉" active={location.pathname.includes('tax/wht')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_wht')} />
+                            <NavItem label="CGT (Capital Gains)" icon="📈" active={location.pathname.includes('tax/cgt')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_cgt')} />
+                            <NavItem label="Filing Pack" icon="📦" active={location.pathname.includes('filing')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('filing_pack')} />
+                        </>
+                    ) : (
+                        <>
+                            {/* Business Specific */}
+                            <NavItem label="Analysis" icon="📈" active={location.pathname.includes('analysis')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('analysis_pl')} />
+                            <NavItem label="CIT Computation" icon="🏢" active={location.pathname.includes('tax/cit')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_cit')} />
+                            <NavItem label="WHT (Withholding)" icon="📉" active={location.pathname.includes('tax/wht')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_wht')} />
+                            <NavItem label="CGT (Capital Gains)" icon="📈" active={location.pathname.includes('tax/cgt')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_cgt')} />
+                            <NavItem label="VAT Returns" icon="🛒" active={location.pathname.includes('tax/vat')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_vat')} />
+                            <NavItem label="Filing Pack" icon="📦" active={location.pathname.includes('filing')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('filing_pack')} />
+                            <NavItem label="Dividend Vouchers" icon="📜" active={location.pathname.includes('dividends')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('dividend_vouchers')} />
+                            <NavItem label="Expense Checklist" icon="✅" active={location.pathname.includes('checklist')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('expense_checklist')} />
+                        </>
+                    )}
 
                     <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>System</div>
-                    <NavItem view="settings" label="Settings" icon="⚙️" activeView={activeView} sidebarOpen={sidebarOpen} onNavigate={onNavigate} />
+                    <NavItem label="Settings" icon="⚙️" active={location.pathname.includes('settings')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('settings')} />
 
                     <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {/* Switch Mode Button */}
                         <button
-                            onClick={() => { setHelpOpen(true); setNotificationOpen(false); }}
+                            onClick={() => onSwitchMode(mode === 'personal' ? 'business' : 'personal')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem',
+                                border: '1px solid #cbd5e1', background: '#f1f5f9', color: '#475569', width: '100%',
+                                borderRadius: '8px', cursor: 'pointer', textAlign: 'left', fontWeight: '600', marginBottom: '0.5rem'
+                            }}
+                        >
+                            <span>⇄</span>
+                            {sidebarOpen && <span>Switch to {mode === 'personal' ? 'Business' : 'Personal'}</span>}
+                        </button>
+
+                        <button
+                            onClick={() => handleNavigate('help')}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem',
                                 border: 'none', background: 'transparent', color: '#64748b', width: '100%',
@@ -116,27 +166,40 @@ export function Layout({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#64748b' }}>☰</button>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Company:</span>
-                            <select
-                                value={activeCompanyId}
-                                onChange={(e) => {
-                                    if (e.target.value === 'ADD_NEW') {
-                                        onAddCompany?.();
-                                    } else {
-                                        onSwitchCompany?.(e.target.value);
-                                    }
-                                }}
-                                style={{ background: 'transparent', border: 'none', fontWeight: '600', fontSize: '0.9rem', color: '#334155', cursor: 'pointer', outline: 'none' }}
-                            >
-                                {companies.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                                <option disabled>──────────</option>
-                                <option value="ADD_NEW">+ Add Company</option>
-                            </select>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                        {mode === 'personal' ? (
+                            <div style={{ background: '#dbeafe', color: '#1e40af', padding: '0.4rem 1rem', borderRadius: '99px', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                Mode: Personal Profile
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <div style={{ background: '#fef3c7', color: '#92400e', padding: '0.4rem 1rem', borderRadius: '99px', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                    Mode: Business
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                    <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Company:</span>
+                                    <select
+                                        value={activeCompanyId || ''}
+                                        onChange={(e) => {
+                                            if (e.target.value === 'ADD_NEW') {
+                                                onAddCompany?.();
+                                            } else {
+                                                onSwitchCompany?.(e.target.value);
+                                            }
+                                        }}
+                                        style={{ background: 'transparent', border: 'none', fontWeight: '600', fontSize: '0.9rem', color: '#334155', cursor: 'pointer', outline: 'none' }}
+                                    >
+                                        <option value="" disabled>Select Company</option>
+                                        {companies.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                        <option disabled>──────────</option>
+                                        <option value="ADD_NEW">+ Add Company</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginLeft: mode === 'personal' ? '1rem' : 0 }}>
                             <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Year:</span>
                             <select style={{ background: 'transparent', border: 'none', fontWeight: '600', fontSize: '0.9rem', color: '#334155', cursor: 'pointer', outline: 'none' }}>
                                 <option>2025 (Jan-Dec)</option>
@@ -148,162 +211,30 @@ export function Layout({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', position: 'relative' }}>
                         <div style={{ position: 'relative' }}>
                             <button
-                                onClick={() => { setNotificationOpen(!notificationOpen); setHelpOpen(false); }}
+                                onClick={() => setShowNotifications(!showNotifications)}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', position: 'relative' }}
                                 title="Notifications"
                             >
                                 🔔
-                                {hasUnread && <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', background: 'red', borderRadius: '50%' }}></span>}
+                                <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '1px 5px', borderRadius: '10px', fontWeight: 'bold' }}>3</span>
                             </button>
-                            {notificationOpen && (
+
+                            {showNotifications && (
                                 <div style={{
-                                    position: 'absolute', top: '150%', right: '0', width: '300px',
+                                    position: 'absolute', top: '120%', right: 0, width: '300px',
                                     background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px',
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', zIndex: 50, overflow: 'hidden'
                                 }}>
-                                    <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', fontWeight: 'bold', color: '#334155' }}>Notifications</div>
+                                    <div style={{ padding: '0.75rem', borderBottom: '1px solid #f1f5f9', fontWeight: 'bold', fontSize: '0.9rem', color: '#1e293b' }}>
+                                        Notifications
+                                    </div>
                                     <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                        {/* Hardcoded notifications for now */}
-                                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: hasUnread ? '#f8fafc' : 'white' }}>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Bank upload completed</div>
-                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>158 transactions imported</div>
-                                        </div>
-                                        {/* ... other items can follow suit if dynamic, keeping simple for fix */}
-                                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>Items need review</div>
-                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>5 items need review (VAT/WHT rules)</div>
-                                        </div>
-                                        {/* ... */}
+                                        <NotificationItem text="Welcome to DEAP! Complete your profile to get started." time="Just now" isNew={true} />
+                                        <NotificationItem text="Tax deadline approaching: VAT returns due soon." time="2 hours ago" isNew={true} />
+                                        <NotificationItem text="System maintenance scheduled for weekend." time="1 day ago" isNew={false} />
                                     </div>
-                                    <div
-                                        onClick={() => { setHasUnread(false); setNotificationOpen(false); }}
-                                        style={{ padding: '0.75rem', textAlign: 'center', borderTop: '1px solid #e2e8f0', color: '#0284c7', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '500' }}
-                                    >
-                                        Mark all as read
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div style={{ position: 'relative' }}>
-                            {/* Help Button Moved to Sidebar */}
-                            {helpOpen && (
-                                <div style={{
-                                    position: 'fixed', top: '0', right: '0', height: '100vh', width: '400px',
-                                    background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 15px rgba(0,0,0,0.1)',
-                                    zIndex: 100, display: 'flex', flexDirection: 'column'
-                                }}>
-                                    {/* Drawer Header */}
-                                    <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
-                                        <h3 style={{ fontWeight: 'bold', color: '#1e293b', margin: 0 }}>Help & Support</h3>
-                                        <button onClick={() => setHelpOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}>✕</button>
-                                    </div>
-
-                                    {/* Search Bar */}
-                                    <div style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9' }}>
-                                        <input
-                                            type="text"
-                                            placeholder="Search help (e.g. VAT, Upload)..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
-                                        />
-                                    </div>
-
-                                    {/* Drawer Content */}
-                                    <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
-                                        {searchTerm ? (
-                                            // Search Results
-                                            <div>
-                                                {filteredHelp.length > 0 ? filteredHelp.map(section => (
-                                                    <div key={section.id} style={{ marginBottom: '1.5rem' }}>
-                                                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase' }}>{section.title}</div>
-                                                        {section.content.map((article, idx) => (
-                                                            <div key={idx} style={{ marginBottom: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#0f172a' }}>{article.title}</div>
-                                                                <div
-                                                                    style={{ fontSize: '0.9rem', color: '#334155', lineHeight: '1.5' }}
-                                                                    dangerouslySetInnerHTML={{ __html: article.body as string }}
-                                                                />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )) : (
-                                                    <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No results found for "{searchTerm}"</div>
-                                                )}
-                                            </div>
-                                        ) : selectedHelpSection ? (
-                                            // Selected Section View
-                                            <div>
-                                                <button
-                                                    onClick={() => setSelectedHelpSection(null)}
-                                                    style={{ background: 'none', border: 'none', color: '#0284c7', cursor: 'pointer', marginBottom: '1rem', fontWeight: '500' }}
-                                                >
-                                                    ← Back to Topics
-                                                </button>
-                                                {HELP_CONTENT.filter(s => s.id === selectedHelpSection).map(section => (
-                                                    <div key={section.id}>
-                                                        <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                            <span>{section.icon}</span> {section.title}
-                                                        </h2>
-                                                        {section.content.map((article, idx) => (
-                                                            <div key={idx} style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                                                                <h4 style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#334155' }}>{article.title}</h4>
-                                                                {article.body === 'checklist' ? (
-                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                                        {['Create business profile', 'Pick tax type', 'Select period', 'Add transactions', 'Generate report'].map(item => (
-                                                                            <label key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', cursor: 'pointer' }}>
-                                                                                <input type="checkbox" /> {item}
-                                                                            </label>
-                                                                        ))}
-                                                                    </div>
-                                                                ) : (
-                                                                    <div
-                                                                        style={{ fontSize: '0.9rem', color: '#475569', lineHeight: '1.6' }}
-                                                                        dangerouslySetInnerHTML={{ __html: article.body as string }}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            // Topics List
-                                            <div style={{ display: 'grid', gap: '0.75rem' }}>
-                                                {HELP_CONTENT.map(section => (
-                                                    <button
-                                                        key={section.id}
-                                                        onClick={() => setSelectedHelpSection(section.id)}
-                                                        style={{
-                                                            display: 'flex', alignItems: 'center', gap: '1rem',
-                                                            padding: '1rem', width: '100%', textAlign: 'left',
-                                                            background: 'white', border: '1px solid #e2e8f0',
-                                                            borderRadius: '8px', cursor: 'pointer',
-                                                            transition: 'all 0.2s'
-                                                        }}
-                                                        onMouseOver={(e) => e.currentTarget.style.borderColor = '#94a3b8'}
-                                                        onMouseOut={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
-                                                    >
-                                                        <span style={{ fontSize: '1.5rem' }}>{section.icon}</span>
-                                                        <div style={{ flex: 1 }}>
-                                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>{section.title}</div>
-                                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{section.content.length} articles</div>
-                                                        </div>
-                                                        <span style={{ color: '#cbd5e1' }}>›</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Drawer Footer */}
-                                    <div style={{ padding: '1rem', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem', fontWeight: 'bold' }}>Need more help?</div>
-                                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                            <a href="https://wa.me/2348068421761" target="_blank" style={{ color: '#16a34a', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' }}>WhatsApp (+234 806 842 1761)</a>
-                                            <a href="mailto:dju78@yahoo.com" style={{ color: '#0284c7', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' }}>Email: dju78@yahoo.com</a>
-                                        </div>
+                                    <div style={{ padding: '0.5rem', textAlign: 'center', background: '#f8fafc', borderTop: '1px solid #f1f5f9' }}>
+                                        <button onClick={() => setShowNotifications(false)} style={{ border: 'none', background: 'none', color: '#64748b', fontSize: '0.8rem', cursor: 'pointer' }}>Close</button>
                                     </div>
                                 </div>
                             )}
@@ -320,28 +251,38 @@ export function Layout({
     );
 }
 
-function NavItem({ view, label, icon, activeView, sidebarOpen, onNavigate }: { view: string, label: string, icon: string, activeView: string, sidebarOpen: boolean, onNavigate: (v: string) => void }) {
+function NavItem({ label, icon, active, sidebarOpen, onClick }: { label: string, icon: string, active: boolean, sidebarOpen: boolean, onClick: () => void }) {
     return (
         <button
-            onClick={() => onNavigate(view)}
+            onClick={onClick}
             style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
                 padding: '0.75rem 1rem',
                 border: 'none',
-                background: activeView === view ? '#e0f2fe' : 'transparent',
-                color: activeView === view ? '#0284c7' : '#64748b',
+                background: active ? '#e0f2fe' : 'transparent',
+                color: active ? '#0284c7' : '#64748b',
                 width: '100%',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontWeight: activeView === view ? '600' : '400',
+                fontWeight: active ? '600' : '400',
                 marginBottom: '0.25rem',
                 textAlign: 'left'
             }}
         >
+            {/* <span style={{ fontSize: '1.2rem' }}>{icon}</span> */}
             <span>{icon}</span>
             {sidebarOpen && <span>{label}</span>}
         </button>
+    );
+}
+
+function NotificationItem({ text, time, isNew }: { text: string, time: string, isNew: boolean }) {
+    return (
+        <div style={{ padding: '0.75rem', borderBottom: '1px solid #f1f5f9', background: isNew ? '#f0f9ff' : 'white' }}>
+            <div style={{ fontSize: '0.85rem', color: '#334155', marginBottom: '0.25rem' }}>{text}</div>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{time}</div>
+        </div>
     );
 }

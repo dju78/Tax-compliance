@@ -12,27 +12,16 @@ interface TaxCITProps {
     expenseChecklist?: AuditInputs;
 }
 
-export function TaxCIT({ transactions, savedInput, onSave, onNavigate, expenseChecklist }: TaxCITProps) {
+export function TaxCIT({ transactions: _transactions, savedInput, onSave, onNavigate, expenseChecklist }: TaxCITProps) {
     const [input, setInput] = useState<CitInput>(savedInput);
     const [autoSync, setAutoSync] = useState(true);
 
-    // Auto-calculate from transactions
+    // Sync with upstream calculated input
     useEffect(() => {
-        if (!autoSync) return;
-
-        const turnover = transactions.reduce((acc, t) => t.amount > 0 && !t.excluded_from_tax ? acc + t.amount : acc, 0);
-        const expenses = transactions.reduce((acc, t) => t.amount < 0 && !t.excluded_from_tax ? acc + Math.abs(t.amount) : acc, 0);
-
-        // Very basic profit calculation. In reality, one would adjust for non-deductibles here.
-        const profit = Math.max(0, turnover - expenses);
-
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setInput(prev => ({
-            ...prev,
-            turnover,
-            assessable_profit: profit
-        }));
-    }, [transactions, autoSync]);
+        if (autoSync) {
+            setInput(savedInput);
+        }
+    }, [savedInput, autoSync]);
 
     const result = calculateCIT(input);
     const formatCurrency = (n: number) => `₦${n.toLocaleString()}`;

@@ -18,7 +18,7 @@ export function DirectorLoanAccount({ transactions, onNavigate }: DirectorLoanPr
             t.category_name?.includes('Director Loan') ||
             t.tax_tag === 'Owner Loan' ||
             t.dla_status === 'confirmed'
-        ).sort((a, b) => a.date.getTime() - b.date.getTime());
+        ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
         return filtered.reduce((acc, t) => {
             const credit = t.amount > 0 ? t.amount : 0;
@@ -96,7 +96,7 @@ export function DirectorLoanAccount({ transactions, onNavigate }: DirectorLoanPr
 
                         {dlaData.map(t => (
                             <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                <td style={{ padding: '1rem' }}>{t.date.toLocaleDateString()}</td>
+                                <td style={{ padding: '1rem' }}>{new Date(t.date).toLocaleDateString()}</td>
                                 <td style={{ padding: '1rem' }}>
                                     {t.description}
                                     <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t.category_name}</div>

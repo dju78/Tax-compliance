@@ -3,6 +3,7 @@ import type { Company } from '../engine/types';
 import { supabase } from '../supabase';
 import { useUserRole } from '../hooks/useUserRole';
 import { hasPermission } from '../engine/rbac';
+import { CATEGORY_RULES } from '../engine/autoCat';
 
 interface SettingsProps {
     company: Company;
@@ -385,29 +386,47 @@ function CategorySettings({ canEdit }: { canEdit: boolean }) {
 }
 
 function AutoCatRules({ canEdit }: { canEdit: boolean }) {
+
+
     return (
         <div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Automation Rules {canEdit ? "" : "(Read Only)"}</h3>
-            <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>Automatically apply categories and tags based on transaction descriptions.</p>
+            <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>Successfully loaded {Object.keys(CATEGORY_RULES).length} NRS-compliant rules.</p>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
-                <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                        <th style={{ padding: '0.75rem' }}>If Description Contains...</th>
-                        <th style={{ padding: '0.75rem' }}>Then Set Category</th>
-                        <th style={{ padding: '0.75rem' }}>And Set Tag</th>
-                        <th style={{ padding: '0.75rem' }}></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '0.75rem' }}>"NEPA" or "EKEDC"</td>
-                        <td style={{ padding: '0.75rem' }}>Utilities</td>
-                        <td style={{ padding: '0.75rem' }}><span style={{ color: '#b91c1c', background: '#fee2e2', padding: '2px 8px', borderRadius: '12px' }}>VAT</span></td>
-                        {canEdit && <td style={{ padding: '0.75rem', color: '#94a3b8', cursor: 'pointer' }}>🗑️</td>}
-                    </tr>
-                </tbody>
-            </table>
+            <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                    <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 1 }}>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                            <th style={{ padding: '0.75rem' }}>Category</th>
+                            <th style={{ padding: '0.75rem' }}>Keywords (Triggers)</th>
+                            <th style={{ padding: '0.75rem' }}>Tax Impact</th>
+                            <th style={{ padding: '0.75rem' }}></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {Object.entries(CATEGORY_RULES).map(([category, keywords]) => {
+                            let tag = '';
+                            let tagColor = '#94a3b8';
+                            let tagBg = '#f1f5f9';
+
+                            if (['Utilities', 'Store Supplies', 'Repairs & Maintenance'].includes(category)) { tag = 'VAT'; tagColor = '#b91c1c'; tagBg = '#fee2e2'; }
+                            else if (['Professional Fees', 'Rent & Rates', 'Contract'].includes(category)) { tag = 'WHT'; tagColor = '#ca8a04'; tagBg = '#fef9c3'; }
+                            else if (category.includes('Director')) { tag = 'AUDIT'; tagColor = '#7c3aed'; tagBg = '#ede9fe'; }
+
+                            return (
+                                <tr key={category} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                    <td style={{ padding: '0.75rem', fontWeight: '500' }}>{category}</td>
+                                    <td style={{ padding: '0.75rem', color: '#64748b' }}>{keywords.slice(0, 5).join(', ')}{keywords.length > 5 && '...'}</td>
+                                    <td style={{ padding: '0.75rem' }}>
+                                        {tag && <span style={{ color: tagColor, background: tagBg, padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>{tag}</span>}
+                                    </td>
+                                    {canEdit && <td style={{ padding: '0.75rem', color: '#94a3b8', cursor: 'pointer' }}>✎</td>}
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
             {canEdit && <button style={{ marginTop: '1.5rem', padding: '0.5rem 1rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white', cursor: 'pointer' }}>+ Add Rule</button>}
         </div>
     );

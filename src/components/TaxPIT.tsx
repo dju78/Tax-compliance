@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react';
-import type { Transaction } from '../engine/types';
 import { calculatePIT, type PitInput } from '../engine/pit';
 import type { AuditInputs } from '../engine/auditRisk';
 import { EXPENSE_CHECKLIST_SOLE } from '../data/expenseChecklists';
 
 interface TaxPITProps {
-    transactions: Transaction[];
     savedInput: PitInput;
     onSave: (input: PitInput) => void;
     onNavigate?: (view: string) => void;
     expenseChecklist?: AuditInputs;
 }
 
-export function TaxPIT({ transactions, savedInput, onSave, onNavigate, expenseChecklist }: TaxPITProps) {
+export function TaxPIT({ savedInput, onSave, onNavigate, expenseChecklist }: TaxPITProps) {
     // ... existing code ...
 
     // (Adding button in return statement header)
@@ -21,26 +19,14 @@ export function TaxPIT({ transactions, savedInput, onSave, onNavigate, expenseCh
     const [autoSync, setAutoSync] = useState(true);
     const [showSteps, setShowSteps] = useState(false);
 
-    // Auto-calculate from transactions
+    // Sync with upstream calculated input
     useEffect(() => {
-        if (!autoSync) return;
+        if (autoSync) {
+            setInput(savedInput);
+        }
+    }, [savedInput, autoSync]);
 
-        const income = transactions.reduce((acc, t) => t.amount > 0 && !t.excluded_from_tax ? acc + t.amount : acc, 0);
-        const expense = transactions.reduce((acc, t) => t.amount < 0 && !t.excluded_from_tax ? acc + Math.abs(t.amount) : acc, 0);
 
-        // Try to identify rent from categories
-        const rent = transactions
-            .filter(t => t.category_name?.toLowerCase().includes('rent') && t.amount < 0)
-            .reduce((acc, t) => acc + Math.abs(t.amount), 0);
-
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setInput(prev => ({
-            ...prev,
-            gross_income: income,
-            allowable_deductions: expense,
-            actual_rent_paid: rent // Auto-detected rent
-        }));
-    }, [transactions, autoSync]);
 
     const result = calculatePIT(input);
     const formatCurrency = (n: number) => `₦${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;

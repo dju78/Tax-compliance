@@ -19,20 +19,20 @@ export const EXPENSE_CHECKLIST_SOLE: ChecklistCategory[] = [
     {
         id: 'staff_labour',
         title: '1. Staff & Labour',
-        icon: '🧾',
+        icon: '👥',
         riskWeight: 2,
         items: [
-            { id: 'salaries', label: 'Employee salaries & wages' },
+            { id: 'salaries', label: 'Staff salaries & wages', warning: 'Must have employment records' },
             { id: 'allowances', label: 'Staff allowances (work-related only)' },
             { id: 'pension', label: 'Pension contributions' },
             { id: 'training', label: 'Staff training costs' },
-            { id: 'owner_salary', label: "Owner's salary", isDisallowed: true, warning: 'NOT allowed' }
+            { id: 'owner_salary', label: "Your own salary (Owner's salary)", isDisallowed: true, warning: 'NOT ALLOWED for sole proprietors' }
         ]
     },
     {
         id: 'rent_utilities',
         title: '2. Rent & Utilities',
-        icon: '🏢',
+        icon: '🏠',
         riskWeight: 3,
         items: [
             { id: 'rent', label: 'Shop / office rent' },
@@ -41,7 +41,7 @@ export const EXPENSE_CHECKLIST_SOLE: ChecklistCategory[] = [
             { id: 'water', label: 'Water' },
             { id: 'internet', label: 'Internet' },
             { id: 'phone', label: 'Business phone line' },
-            { id: 'home_use', label: 'Home use expenses', warning: 'Apportion % for business use only' }
+            { id: 'home_use', label: 'Home office', warning: 'Apportion 20-30% for business use only' }
         ]
     },
     {
@@ -50,7 +50,7 @@ export const EXPENSE_CHECKLIST_SOLE: ChecklistCategory[] = [
         icon: '🚗',
         riskWeight: 6,
         items: [
-            { id: 'fuel_biz', label: 'Fuel (business trips only)' },
+            { id: 'fuel_biz', label: 'Business fuel', warning: 'HIGH RISK if >25% of turnover' },
             { id: 'vehicle_repairs', label: 'Vehicle repairs' },
             { id: 'vehicle_servicing', label: 'Vehicle servicing' },
             { id: 'delivery', label: 'Delivery & haulage' },

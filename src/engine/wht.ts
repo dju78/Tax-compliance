@@ -17,6 +17,12 @@ export interface WhtResult {
     type: WhtType;
 }
 
+export interface WhtInput {
+    wht_payable: number;
+    wht_receivable: number;
+    notes?: string;
+}
+
 export const WHT_RATES: Record<WhtType, number> = {
     'Dividend': 0.10,
     'Interest': 0.10,

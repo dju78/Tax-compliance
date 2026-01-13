@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from './supabase';
 import { Auth } from './components/Auth';
 import type { Transaction, StatementSummary, Company, FilingChecklist, FilingChecks } from './engine/types';
@@ -7,38 +8,32 @@ import { Dashboard } from './components/Dashboard';
 import { UploadZone } from './components/UploadZone';
 import { SmartLedger } from './components/SmartLedger';
 import { ProfitLossAnalysis } from './components/ProfitLossAnalysis';
-import { TaxYearSplit } from './components/TaxYearSplit';
-import { DirectorLoanAccount } from './components/DirectorLoanAccount';
 import { TaxPIT } from './components/TaxPIT';
 import { TaxCIT } from './components/TaxCIT';
 import { TaxVAT } from './components/TaxVAT';
-import { Reports } from './components/Reports';
+import { TaxCGT } from './components/TaxCGT';
+import { TaxWHT } from './components/TaxWHT';
+import { TaxYearSplit } from './components/TaxYearSplit';
+import { CashFlowStatement } from './components/CashFlowStatement';
 import { FilingPack } from './components/FilingPack';
 import { Settings } from './components/Settings';
-import { autoCategorize } from './engine/autoCat';
-
-import { type AuditInputs } from './engine/auditRisk';
-import type { PitInput } from './engine/pit';
-import { type CitInput } from './engine/cit';
-import { type VatInput } from './engine/vat';
-
 import { DividendVoucherList } from './components/DividendVoucherList';
 import { DividendVoucherForm } from './components/DividendVoucherForm';
 import { ExpenseChecklist } from './components/ExpenseChecklist';
+import { StatementOfAccount } from './components/StatementOfAccount';
+import { Onboarding } from './components/Onboarding';
+import { PersonalCreate } from './components/PersonalCreate';
+import { Help } from './components/Help';
+import { Documentation } from './components/Documentation';
 
-// ... inside App function
-interface CompanySession {
-  company: Company;
-  statementData: { transactions: Transaction[], summary: StatementSummary } | null;
-  pitInput: PitInput;
-  citInput: CitInput;
-  vatInput: VatInput;
-  checklist: FilingChecklist;
-  filingChecks: FilingChecks; // New
-  expenseChecklist: AuditInputs;
-}
+import type { AuditInputs } from './engine/auditRisk';
+import type { PitInput } from './engine/pit';
+import type { CitInput } from './engine/cit';
+import type { CgtInput } from './engine/cgt';
+import type { WhtInput } from './engine/wht';
+import { calculateVatFromAmount, type VatInput } from './engine/vat';
 
-// Defaults
+// Types and Defaults
 const defaultFilingChecks: FilingChecks = {
   company_id: '',
   tax_year_label: '2025',
@@ -47,67 +42,42 @@ const defaultFilingChecks: FilingChecks = {
   updated_at: new Date()
 };
 
-// ...
+const defaultPit: PitInput = { gross_income: 5000000, allowable_deductions: 500000, non_taxable_income: 0, actual_rent_paid: 1000000 };
+const defaultCit: CitInput = { turnover: 120000000, assessable_profit: 30000000 };
+const defaultCgt: CgtInput = { entity_type: 'company', gain_amount: 0, turnover: 0 };
+const defaultWht: WhtInput = { wht_payable: 0, wht_receivable: 0 };
+const defaultVat: VatInput = { output_vat: 75000, input_vat: 25000, is_registered: true };
+const defaultChecklist: FilingChecklist = { incomeReconciled: false, expensesReviewed: false, vatReconciled: false, payeCredits: false };
+const defaultExpenseChecklist: AuditInputs = {
+  type: 'SOLE',
+  turnover: 0,
+  selectedItems: [],
+  receiptMissing: false,
+  noSeparateAccount: false,
+  cashOver500k: false,
+  noWHT: false,
+  repeatedLosses: false,
+  suddenSpike: false
+};
 
+interface CompanySession {
+  company: Company;
+  statementData: { transactions: Transaction[], summary: StatementSummary } | null;
+  pitInput: PitInput;
+  citInput: CitInput;
+  cgtInput: CgtInput;
+  whtInput: WhtInput;
+  vatInput: VatInput;
+  checklist: FilingChecklist;
+  filingChecks: FilingChecks;
+  expenseChecklist: AuditInputs;
+}
 
-// Multi-Company State
+// Main App Container
 function App() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState('dashboard');
-  const [editingVoucherId, setEditingVoucherId] = useState<string | null>(null);
-
-  interface CompanySession {
-    company: Company;
-    statementData: { transactions: Transaction[], summary: StatementSummary } | null;
-    pitInput: PitInput;
-    citInput: CitInput;
-    vatInput: VatInput;
-    checklist: FilingChecklist;
-    filingChecks: FilingChecks;
-    expenseChecklist: AuditInputs;
-  }
-
-  const defaultPit: PitInput = { gross_income: 5000000, allowable_deductions: 500000, non_taxable_income: 0, actual_rent_paid: 1000000 };
-  const defaultCit: CitInput = { turnover: 120000000, assessable_profit: 30000000 };
-  const defaultVat: VatInput = { output_vat: 75000, input_vat: 25000, is_registered: true };
-  const defaultChecklist: FilingChecklist = { incomeReconciled: false, expensesReviewed: false, vatReconciled: false, payeCredits: false };
-  const defaultExpenseChecklist: AuditInputs = {
-    type: 'SOLE',
-    turnover: 0,
-    selectedItems: [],
-    receiptMissing: false,
-    noSeparateAccount: false,
-    cashOver500k: false,
-    noWHT: false,
-    repeatedLosses: false,
-    suddenSpike: false
-  };
-
-  const [activeCompanyId, setActiveCompanyId] = useState<string>('default');
-  const [sessions, setSessions] = useState<Record<string, CompanySession>>({
-    'default': {
-      company: { id: 'default', name: 'Univelcity Ltd' },
-      statementData: null,
-      pitInput: defaultPit,
-      citInput: defaultCit,
-      vatInput: defaultVat,
-      checklist: defaultChecklist,
-      filingChecks: { ...defaultFilingChecks, company_id: 'default' },
-      expenseChecklist: defaultExpenseChecklist
-    },
-    'personal': {
-      company: { id: 'personal', name: 'Personal Accounts' },
-      statementData: null,
-      pitInput: defaultPit,
-      citInput: defaultCit,
-      vatInput: defaultVat,
-      checklist: defaultChecklist,
-      filingChecks: { ...defaultFilingChecks, company_id: 'personal' },
-      expenseChecklist: defaultExpenseChecklist
-    }
-  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -123,304 +93,720 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Persistence
-  useEffect(() => {
-    const saved = localStorage.getItem('deap_sessions');
-    if (saved) {
-      try {
-        const dateFields = ['date', 'period_start', 'period_end', 'date_of_payment', 'created_at', 'opening_balance_date'];
-        const parsed = JSON.parse(saved, (key, value) => {
-          if (typeof value === 'string' && dateFields.includes(key)) {
-            // Simple validation to check if it looks like a date
-            if (/^\d{4}-\d{2}-\d{2}/.test(value)) return new Date(value);
-          }
-          return value;
-        });
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setSessions(parsed);
-      } catch (e) {
-        console.error("Failed to load sessions", e);
-      }
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+  if (!user) return <Auth />;
+
+  return (
+    <BrowserRouter>
+      <AppContent user={user} />
+    </BrowserRouter>
+  );
+}
+
+// Internal Content Wrapper
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function AppContent({ user }: { user: any }) {
+  const navigate = useNavigate();
+
+  // State
+  // We maintain 'sessions' as the in-memory DB of loaded company data
+  const [sessions, setSessions] = useState<Record<string, CompanySession>>({
+    // Initial personal session placeholder
+    'personal': {
+      company: { id: 'personal', name: 'Personal Accounts', entity_type: 'sole_trader', user_id: 'personal' },
+      statementData: null,
+      pitInput: defaultPit,
+      citInput: defaultCit,
+      cgtInput: defaultCgt,
+      whtInput: defaultWht,
+      vatInput: defaultVat,
+      checklist: defaultChecklist,
+      filingChecks: { ...defaultFilingChecks, company_id: 'personal' },
+      expenseChecklist: defaultExpenseChecklist
     }
-    const savedActive = localStorage.getItem('deap_active_id');
-    if (savedActive) setActiveCompanyId(savedActive);
-  }, []);
+  });
 
+  // Active Context State (Derived usually, but stored for API/Persistence)
+  const [editingVoucherId, setEditingVoucherId] = useState<string | null>(null);
+
+  // Load Data from Supabase
   useEffect(() => {
-    localStorage.setItem('deap_sessions', JSON.stringify(sessions));
-  }, [sessions]);
+    const loadData = async () => {
+      if (!user) return;
 
-  useEffect(() => {
-    localStorage.setItem('deap_active_id', activeCompanyId);
-  }, [activeCompanyId]);
+      try {
+        // 1. Load Personal Profile
+        const { data: profile } = await supabase
+          .from('personal_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-  if (loading) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f1f5f9' }}>
-        <div style={{ width: '40px', height: '40px', border: '4px solid #cbd5e1', borderTopColor: '#0f172a', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
+        // 2. Load Companies
+        const { data: companies } = await supabase
+          .from('companies')
+          .select('*')
+          .eq('user_id', user.id);
 
-  if (!user) {
-    return <Auth />;
-  }
+        // 3. Load Filing Status & Transactions
+        const [filingRes, txnRes] = await Promise.all([
+          supabase.from('filing_status').select('*'),
+          // Try to order by txn_date (DB column) if date fails, or just fetch * and sort in JS
+          supabase.from('transactions').select('*')
+        ]);
+
+        if (filingRes.error) console.error("Error fetching filing status:", filingRes.error);
+        if (txnRes.error) console.error("Error fetching transactions:", txnRes.error);
+
+        // Map Filing Status
+        const filingStatusMap: Record<string, any> = {};
+        if (filingRes.data) {
+          filingRes.data.forEach(fs => {
+            if (fs.company_id) filingStatusMap[fs.company_id] = fs;
+            else if (fs.personal_profile_id) filingStatusMap[fs.personal_profile_id] = fs;
+          });
+        }
+
+        // Map Transactions
+        const txnsByScope: Record<string, Transaction[]> = {};
+        if (txnRes.data) {
+          // Sort manually since we might have issues with column names in .order()
+          const sortedData = (txnRes.data as any[]).sort((a, b) => {
+            const dA = new Date(a.txn_date || a.date).getTime();
+            const dB = new Date(b.txn_date || b.date).getTime();
+            return dA - dB;
+          });
+
+          sortedData.forEach((t: any) => {
+            const scopeId = t.company_id || t.personal_profile_id;
+            if (!scopeId) return;
+            if (!txnsByScope[scopeId]) txnsByScope[scopeId] = [];
+
+            // MAP txn_date (DB) to date (Frontend)
+            const mappedTxn: Transaction = {
+              ...t,
+              date: t.txn_date || t.date // Fallback
+            };
+
+            txnsByScope[scopeId].push(mappedTxn);
+          });
+        }
+
+        const newSessions: Record<string, CompanySession> = {};
+
+        // 2a. Init Personal Session
+        const profileId = profile?.id || 'personal';
+        const personalFilingStatus = filingStatusMap[profileId];
+        const pTxns = txnsByScope[profileId] || [];
+
+        let pStatementData = null;
+        if (pTxns.length > 0) {
+          const inflow = pTxns.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
+          const outflow = pTxns.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
+          pStatementData = {
+            transactions: pTxns,
+            summary: {
+              total_inflow: inflow,
+              total_outflow: outflow,
+              net_cash_flow: inflow - outflow,
+              transaction_count: pTxns.length,
+              period_start: new Date(pTxns[0].date),
+              period_end: new Date(pTxns[pTxns.length - 1].date)
+            }
+          };
+        }
+
+        newSessions['personal'] = {
+          company: {
+            id: profileId,
+            name: profile?.full_name || 'Personal Accounts',
+            entity_type: 'sole_trader',
+            user_id: user.id
+          },
+          statementData: pStatementData,
+          pitInput: personalFilingStatus?.inputs?.pit || defaultPit,
+          citInput: personalFilingStatus?.inputs?.cit || defaultCit, // Personal might not have CIT, but keep for type consistency
+          cgtInput: personalFilingStatus?.inputs?.cgt || { ...defaultCgt, entity_type: 'individual' },
+          whtInput: personalFilingStatus?.inputs?.wht || defaultWht,
+          vatInput: personalFilingStatus?.inputs?.vat || defaultVat, // Personal might not have VAT, but keep for type consistency
+          checklist: personalFilingStatus?.checklist_data || defaultChecklist,
+          filingChecks: { ...defaultFilingChecks, company_id: profileId },
+          expenseChecklist: personalFilingStatus?.inputs?.expense || defaultExpenseChecklist
+        };
+
+        // 2b. Init Company Sessions
+        if (companies) {
+          companies.forEach(c => {
+            const companyFilingStatus = filingStatusMap[c.id];
+            const cTxns = txnsByScope[c.id] || [];
+
+            let cStatementData = null;
+            if (cTxns.length > 0) {
+              const inflow = cTxns.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
+              const outflow = cTxns.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
+              cStatementData = {
+                transactions: cTxns,
+                summary: {
+                  total_inflow: inflow,
+                  total_outflow: outflow,
+                  net_cash_flow: inflow - outflow,
+                  transaction_count: cTxns.length,
+                  period_start: new Date(cTxns[0].date),
+                  period_end: new Date(cTxns[cTxns.length - 1].date)
+                }
+              };
+            }
+
+            newSessions[c.id] = {
+              company: c as Company,
+              statementData: cStatementData,
+              pitInput: companyFilingStatus?.inputs?.pit || defaultPit, // Company might not have PIT, but keep for type consistency
+              citInput: companyFilingStatus?.inputs?.cit || defaultCit,
+              cgtInput: companyFilingStatus?.inputs?.cgt || defaultCgt,
+              whtInput: companyFilingStatus?.inputs?.wht || defaultWht,
+              vatInput: companyFilingStatus?.inputs?.vat || defaultVat,
+              checklist: companyFilingStatus?.checklist_data || defaultChecklist,
+              filingChecks: { ...defaultFilingChecks, company_id: c.id },
+              expenseChecklist: companyFilingStatus?.inputs?.expense || defaultExpenseChecklist
+            };
+          });
+        }
+
+        setSessions(newSessions);
+
+      } catch (e) {
+        console.error("Failed to hydrate data:", e);
+      }
+    };
+
+    loadData();
+  }, [user]);
+
+  // Remove localStorage Saver (No-op or rely on specific updaters later)
+  // We will persist changes via specific mutation acts, not global state dump.
+
+  // -------------- Helpers ----------------
+  const updateSession = (sessionId: string, updater: (prev: CompanySession) => CompanySession) => {
+    // This only updates LOCAL state. We need to implement REAL persistence for each slice (transactions, checklist, etc)
+    // For Phase 3 (Auth/Routing), specifically for "Create Company", we are protected.
+    // For Phase 4 (Data), we will refactor 'updateSession' to call Supabase.
+    setSessions(prev => {
+      const current = prev[sessionId];
+      if (!current) return prev; // Safety
+      return {
+        ...prev,
+        [sessionId]: updater(current)
+      };
+    });
+  };
+
+  const handleCreateCompany = async (name: string) => {
+    if (!user) throw new Error("No user");
+
+    // Insert into DB
+    const { data, error } = await supabase
+      .from('companies')
+      .insert([{
+        user_id: user.id,
+        name,
+        entity_type: 'ltd', // Default for now
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Create company error:", error);
+      throw error;
+    }
+    const newCompany = data as Company;
+
+    // Update Local State
+    setSessions(prev => ({
+      ...prev,
+      [newCompany.id]: {
+        company: newCompany,
+        statementData: null,
+        pitInput: defaultPit, citInput: defaultCit, cgtInput: defaultCgt, whtInput: defaultWht, vatInput: defaultVat, checklist: defaultChecklist,
+        filingChecks: { ...defaultFilingChecks, company_id: newCompany.id },
+        expenseChecklist: defaultExpenseChecklist
+      }
+    }));
+    return newCompany.id;
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
 
-  const activeSession = sessions[activeCompanyId];
 
-  // Helper setters for active session
-  const updateSession = (updater: (prev: CompanySession) => CompanySession) => {
-    setSessions(prev => ({
-      ...prev,
-      [activeCompanyId]: updater(prev[activeCompanyId])
-    }));
-  };
+  // -------------- Components for Routes ----------------
 
-  const setStatementData = (data: { transactions: Transaction[], summary: StatementSummary } | null) =>
-    updateSession(s => ({ ...s, statementData: data }));
+  const RouteWrapper = ({ mode }: { mode: 'personal' | 'business' }) => {
+    const params = useParams();
+    const currentId = params.companyId || 'personal';
 
-  const setPitInput = (input: PitInput | ((prev: PitInput) => PitInput)) =>
-    updateSession(s => ({ ...s, pitInput: typeof input === 'function' ? input(s.pitInput) : input }));
+    // Safety check for business mode
+    if (mode === 'business' && !params.companyId) {
+      return <Navigate to="/companies/select" replace />;
+    }
 
-  const setCitInput = (input: CitInput | ((prev: CitInput) => CitInput)) =>
-    updateSession(s => ({ ...s, citInput: typeof input === 'function' ? input(s.citInput) : input }));
+    if (!sessions[currentId] && mode === 'business') {
+      // Fallback if ID invalid, redirect
+      return <Navigate to="/companies/select" replace />;
+    }
 
-  const setVatInput = (input: VatInput | ((prev: VatInput) => VatInput)) =>
-    updateSession(s => ({ ...s, vatInput: typeof input === 'function' ? input(s.vatInput) : input }));
+    const session = sessions[currentId] || sessions['personal']; // Safe access
 
-  const setChecklist = (input: FilingChecklist | ((prev: FilingChecklist) => FilingChecklist)) =>
-    updateSession(s => ({ ...s, checklist: typeof input === 'function' ? input(s.checklist) : input }));
+    // Child Logic Helpers
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Persistence Helper
+    const persistFiling = async (inputOverrides?: any, checkOverrides?: any) => {
+      const s = sessions[currentId];
+      const isPersonal = mode === 'personal';
+      const realId = s.company.id;
 
-  const setExpenseChecklist = (input: AuditInputs | ((prev: AuditInputs) => AuditInputs)) =>
-    updateSession(s => ({ ...s, expenseChecklist: typeof input === 'function' ? input(s.expenseChecklist) : input }));
+      const inputs = {
+        pit: s.pitInput,
+        cit: s.citInput,
+        cgt: s.cgtInput,
+        wht: s.whtInput,
+        vat: s.vatInput,
+        expense: s.expenseChecklist,
+        ...inputOverrides
+      };
+      const checklist = checkOverrides || s.checklist;
 
-  const setFilingChecks = (input: FilingChecks | ((prev: FilingChecks) => FilingChecks)) =>
-    updateSession(s => ({ ...s, filingChecks: typeof input === 'function' ? input(s.filingChecks) : input }));
+      // determine update payload
+      const payload: any = {
+        tax_year_label: '2025',
+        inputs,
+        checklist_data: checklist
+      };
+      if (isPersonal) payload.personal_profile_id = realId;
+      else payload.company_id = realId;
 
+      // Fire & Forget Upsert
+      supabase.from('filing_status').upsert(payload, {
+        onConflict: isPersonal ? 'personal_profile_id, tax_year_label' : 'company_id, tax_year_label'
+      }).then(({ error }) => {
+        if (error) console.error("Persist failed", error);
+      });
+    };
 
-  // ...
+    // Child Logic Helpers
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Unified Transaction Updater (recalculates all derived metrics)
+    const handleTransactionUpdate = (newTxns: Transaction[]) => {
+      const isPersonal = mode === 'personal';
+      const s = sessions[currentId];
 
-  const handleAddCompany = () => {
-    const name = prompt("Enter new company name:");
-    if (!name) return;
-    const id = crypto.randomUUID();
-    setSessions(prev => ({
-      ...prev,
-      [id]: {
-        company: { id, name, created_at: new Date(), entity_type: 'sole_trader' },
-        statementData: null,
-        pitInput: defaultPit,
-        citInput: defaultCit,
-        vatInput: defaultVat,
-        checklist: defaultChecklist,
-        filingChecks: { ...defaultFilingChecks, company_id: id },
-        expenseChecklist: defaultExpenseChecklist,
-      }
-    }));
-    setActiveCompanyId(id);
-    setActiveView('dashboard');
-  };
-
-  const handleStatementUpload = (data: { transactions: Transaction[], summary: StatementSummary }) => {
-    // Inject company_id into transactions & auto-categorize
-    const taggedTransactions = data.transactions.map(t => ({
-      ...t,
-      company_id: activeCompanyId,
-      category_name: autoCategorize(t.description) || t.category_name
-    }));
-
-    updateSession(s => {
-      const existingTxns = s.statementData?.transactions || [];
-      const newTxns = [...existingTxns, ...taggedTransactions];
-
-      // Re-calculate Summary
+      // 1. Core Sums
       const total_inflow = newTxns.filter(t => t.amount > 0).reduce((a, b) => a + b.amount, 0);
-      const total_outflow = newTxns.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
+      const total_outflow_abs = newTxns.filter(t => t.amount < 0).reduce((a, b) => a + Math.abs(b.amount), 0);
 
-      const newSummary: StatementSummary = {
-        total_inflow,
-        total_outflow,
-        net_cash_flow: total_inflow - total_outflow,
-        transaction_count: newTxns.length,
-        period_start: newTxns[0]?.date || new Date(),
-        period_end: newTxns[newTxns.length - 1]?.date || new Date()
-      };
+      // 2. Adjustments
+      const nonDeductible = newTxns
+        .filter(t => t.amount < 0 && (t.tax_tag === 'Non-deductible' || t.dla_status === 'confirmed' || t.excluded_from_tax))
+        .reduce((a, b) => a + Math.abs(b.amount), 0);
 
-      return {
-        ...s,
-        statementData: { transactions: newTxns, summary: newSummary },
-        pitInput: {
-          ...s.pitInput,
-          gross_income: total_inflow,
-          allowable_deductions: total_outflow,
-        },
-        citInput: {
-          ...s.citInput,
-          turnover: total_inflow,
-          assessable_profit: Math.max(0, total_inflow - total_outflow)
+      const allowable_deductions = total_outflow_abs - nonDeductible;
+
+      // 3. VAT Logic
+      let output_vat = 0;
+      let input_vat = 0;
+
+      newTxns.forEach(t => {
+        if (t.tax_tag === 'VAT') {
+          if (t.amount > 0) output_vat += calculateVatFromAmount(t.amount);
+          else input_vat += calculateVatFromAmount(Math.abs(t.amount));
         }
+      });
+
+      // 3b. CGT Logic
+      const cgtGain = newTxns
+        .filter(t => t.tax_tag === 'Capital Gain')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      // 3c. WHT Logic (Simple Estimate based on tags)
+      let whtPayable = 0;
+      let whtReceivable = 0;
+      newTxns.forEach(t => {
+        if (t.tax_tag === 'WHT') {
+          // 5% default estimation if tagged
+          const whtAmount = Math.abs(t.amount) * 0.05;
+          if (t.amount < 0) whtPayable += whtAmount; // We paid, so we withheld
+          else whtReceivable += whtAmount; // We received, so they withheld
+        }
+      });
+
+      // 4. Construct Updates
+      const newPit = {
+        ...(s.pitInput || defaultPit),
+        gross_income: total_inflow,
+        allowable_deductions: allowable_deductions
       };
+
+      const newCit = {
+        ...(s.citInput || defaultCit),
+        turnover: total_inflow,
+        assessable_profit: Math.max(0, total_inflow - allowable_deductions)
+      };
+
+      const newCgt: CgtInput = {
+        ...(s.cgtInput || defaultCgt),
+        entity_type: isPersonal ? 'individual' : 'company',
+        gain_amount: cgtGain,
+        turnover: total_inflow // For small company check
+      };
+
+      const newWht: WhtInput = {
+        ...(s.whtInput || defaultWht),
+        wht_payable: whtPayable,
+        wht_receivable: whtReceivable
+      };
+
+      const newVat = {
+        ...(s.vatInput || defaultVat),
+        output_vat,
+        input_vat
+      };
+
+      updateSession(currentId, sess => ({
+        ...sess,
+        statementData: {
+          ...(sess.statementData || { summary: {} as StatementSummary }),
+          transactions: newTxns,
+          summary: {
+            ...(sess.statementData?.summary || {} as StatementSummary),
+            total_inflow,
+            total_outflow: total_outflow_abs,
+            net_cash_flow: total_inflow - total_outflow_abs,
+            transaction_count: newTxns.length,
+            period_start: sess.statementData?.summary?.period_start || new Date(),
+            period_end: sess.statementData?.summary?.period_end || new Date()
+          }
+        } as any,
+        pitInput: newPit,
+
+        citInput: newCit,
+        cgtInput: newCgt,
+        whtInput: newWht,
+        vatInput: newVat
+      }));
+
+      persistFiling({ pit: newPit, cit: newCit, cgt: newCgt, wht: newWht, vat: newVat });
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setPit = (v: any) => updateSession(currentId, s => {
+      const newVal = typeof v === 'function' ? v(s.pitInput) : v;
+      persistFiling({ pit: newVal });
+      return { ...s, pitInput: newVal };
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setCit = (v: any) => updateSession(currentId, s => {
+      const newVal = typeof v === 'function' ? v(s.citInput) : v;
+      persistFiling({ cit: newVal });
+      return { ...s, citInput: newVal };
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setCgt = (v: any) => updateSession(currentId, s => {
+      const newVal = typeof v === 'function' ? v(s.cgtInput) : v;
+      persistFiling({ cgt: newVal });
+      return { ...s, cgtInput: newVal };
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setWht = (v: any) => updateSession(currentId, s => {
+      const newVal = typeof v === 'function' ? v(s.whtInput) : v;
+      persistFiling({ wht: newVal });
+      return { ...s, whtInput: newVal };
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setVat = (v: any) => updateSession(currentId, s => {
+      const newVal = typeof v === 'function' ? v(s.vatInput) : v;
+      persistFiling({ vat: newVal });
+      return { ...s, vatInput: newVal };
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setChecks = (v: any) => updateSession(currentId, s => {
+      const newVal = typeof v === 'function' ? v(s.filingChecks) : v;
+      persistFiling(undefined, newVal); // Update checklist
+      return { ...s, filingChecks: newVal };
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setExpCheck = (v: any) => updateSession(currentId, s => {
+      const newVal = typeof v === 'function' ? v(s.expenseChecklist || defaultExpenseChecklist) : v;
+      persistFiling({ expense: newVal });
+      return { ...s, expenseChecklist: newVal };
     });
 
-    setActiveView('transactions');
+    const handleStatementUpload = (data: { transactions: Transaction[], summary: StatementSummary }) => {
+      const taggedTransactions = data.transactions.map(t => ({
+        ...t,
+        company_id: currentId,
+        category_name: t.category_name
+      }));
+
+      // Merge and update
+      const existingTxns = sessions[currentId].statementData?.transactions || [];
+      const newTxns = [...existingTxns, ...taggedTransactions];
+
+      handleTransactionUpdate(newTxns);
+      navigate(mode === 'personal' ? '/personal/transactions' : `/companies/${currentId}/transactions`);
+    };
+
+    // Filter companies for the dropdown
+    const availableCompanies = Object.values(sessions).filter(s => s.company.id !== 'personal').map(s => s.company);
+
+    return (
+      <Layout
+        mode={mode}
+        activeCompanyId={mode === 'business' ? currentId : undefined}
+        companies={availableCompanies}
+        onSwitchCompany={(id) => navigate(`/companies/${id}/dashboard`)}
+        onAddCompany={() => navigate('/companies/new')}
+        onLogout={handleLogout}
+        onSwitchMode={(m) => m === 'personal' ? navigate('/personal/dashboard') : navigate('/companies/select')}
+      >
+        <Routes>
+          <Route path="dashboard" element={
+            <Dashboard
+              summary={session.statementData?.summary || null}
+              transactions={session.statementData?.transactions || []}
+              onNavigate={(view) => {
+                const routeMap: Record<string, string> = {
+                  'reports': 'analysis',
+                  'settings': 'settings',
+                  'upload': 'upload',
+                  'transactions': 'transactions',
+                  'tax_pit': 'tax/pit',
+                  'tax_cit': 'tax/cit',
+                  'tax_cgt': 'tax/cgt',
+                  'tax_wht': 'tax/wht',
+                  'tax_vat': 'tax/vat',
+                  'expense_checklist': 'compliance', // Map to compliance view
+                  'dividend_vouchers': 'dividends',
+                };
+                const target = routeMap[view] || view;
+                const prefix = mode === 'personal' ? '/personal' : `/companies/${currentId}`;
+                navigate(`${prefix}/${target}`);
+              }}
+            />
+          } />
+          <Route path="upload" element={
+            <div>
+              <h2 style={{ marginBottom: '1rem' }}>Upload Data ({mode === 'personal' ? 'Personal' : 'Business'})</h2>
+              <UploadZone
+                onUpload={handleStatementUpload}
+                companyId={session.company.id}
+                isPersonal={mode === 'personal'}
+              />
+            </div>
+          } />
+          <Route path="transactions" element={
+            session.statementData ? (
+              <SmartLedger
+                transactions={session.statementData.transactions}
+                onUpdate={handleTransactionUpdate}
+                onSave={async (txn) => {
+                  await supabase.from('transactions').update({
+                    category_name: txn.category_name,
+                    description: txn.description,
+                    tax_tag: txn.tax_tag,
+                    dla_status: txn.dla_status,
+                    // safe to update these if changed
+                    amount: txn.amount,
+                    txn_date: new Date(txn.date).toISOString() // Map back to DB column
+                  }).eq('id', txn.id);
+                }}
+                onSaveBulk={async (txns) => {
+                  const payload = txns.map(t => ({
+                    id: t.id,
+                    company_id: session.company.id === 'personal' ? null : session.company.id, // Should match existing
+                    personal_profile_id: session.company.id === 'personal' ? session.company.id : null,
+                    // We only really need to update the changed fields, but upsert needs Primary Key + fields
+                    // Safer to map all editable fields
+                    category_name: t.category_name,
+                    description: t.description,
+                    tax_tag: t.tax_tag,
+                    dla_status: t.dla_status,
+                    amount: t.amount,
+                    txn_date: new Date(t.date).toISOString() // Map back to DB column
+                  }));
+                  await supabase.from('transactions').upsert(payload);
+                }}
+                onNavigate={(view) => {
+                  if (view === 'analysis_pl') navigate(mode === 'personal' ? '/personal/tax/pit' : `/companies/${currentId}/analysis`);
+                  else navigate(view);
+                }}
+              />
+            ) : <NoDataFallback mode={mode} />
+          } />
+
+          <Route path="analysis" element={
+            session.statementData ? (
+              <ProfitLossAnalysis
+                transactions={session.statementData.transactions}
+                onNavigate={(view) => {
+                  if (view === 'tax_cit') navigate(mode === 'personal' ? '/personal/tax/pit' : `/companies/${currentId}/tax/cit`);
+                  else navigate(view);
+                }}
+              />
+            ) : <NoDataFallback mode={mode} />
+          } />
+          <Route path="analysis/split" element={<TaxYearSplit transactions={session.statementData?.transactions || []} />} />
+          <Route path="analysis/statement" element={<StatementOfAccount transactions={session.statementData?.transactions || []} onUpdate={handleTransactionUpdate} onDownloadExcel={() => { alert('Use the main Filing Pack to download excel'); }} />} />
+          <Route path="analysis/cashflow" element={<CashFlowStatement transactions={session.statementData?.transactions || []} />} />
+          <Route path="help" element={<Help />} />
+          <Route path="docs" element={<Documentation />} />
+
+          {/* Personal Routes */}
+          <Route path="tax/pit" element={<TaxPIT savedInput={session.pitInput} onSave={setPit} onNavigate={(view) => {
+            if (view === 'filing_pack') navigate(mode === 'personal' ? '/personal/filing' : `/companies/${currentId}/filing`);
+            else navigate(view);
+          }} expenseChecklist={session.expenseChecklist} />} />
+          <Route path="tax/cgt" element={<TaxCGT savedInput={session.cgtInput} entityType="individual" onSave={setCgt} onNavigate={(view) => {
+            if (view === 'filing_pack') navigate(mode === 'personal' ? '/personal/filing' : `/companies/${currentId}/filing`);
+            else navigate(view);
+          }} />} />
+          <Route path="tax/wht" element={<TaxWHT transactions={session.statementData?.transactions || []} savedInput={session.whtInput} onSave={setWht} onNavigate={(view) => {
+            if (view === 'filing_pack') navigate(mode === 'personal' ? '/personal/filing' : `/companies/${currentId}/filing`);
+            else navigate(view);
+          }} />} />
+
+          {/* Business Routes */}
+          <Route path="analysis" element={session.statementData ? (
+            <ProfitLossAnalysis
+              transactions={session.statementData.transactions}
+              onNavigate={(view) => {
+                if (view === 'tax_cit') navigate(`/companies/${currentId}/tax/cit`);
+                else navigate(view);
+              }}
+            />
+          ) : <NoDataFallback mode={mode} />} />
+          <Route path="analysis/split" element={<TaxYearSplit transactions={session.statementData?.transactions || []} />} />
+          <Route path="analysis/cashflow" element={<CashFlowStatement transactions={session.statementData?.transactions || []} />} />
+
+          <Route path="tax/cit" element={<TaxCIT transactions={session.statementData?.transactions || []} savedInput={session.citInput} onSave={setCit} onNavigate={(view) => {
+            if (view === 'filing_pack') navigate(`/companies/${currentId}/filing`);
+            else navigate(view);
+          }} expenseChecklist={session.expenseChecklist} />} />
+          <Route path="tax/cgt" element={<TaxCGT savedInput={session.cgtInput} entityType="company" onSave={setCgt} onNavigate={(view) => {
+            if (view === 'filing_pack') navigate(`/companies/${currentId}/filing`);
+            else navigate(view);
+          }} />} />
+          <Route path="tax/wht" element={<TaxWHT transactions={session.statementData?.transactions || []} savedInput={session.whtInput} onSave={setWht} onNavigate={(view) => {
+            if (view === 'filing_pack') navigate(`/companies/${currentId}/filing`);
+            else navigate(view);
+          }} />} />
+          <Route path="tax/vat" element={<TaxVAT transactions={session.statementData?.transactions || []} savedInput={session.vatInput} onSave={setVat} onNavigate={(view) => {
+            if (view === 'filing_pack') navigate(`/companies/${currentId}/filing`);
+            else navigate(view);
+          }} />} />
+          <Route path="dividends" element={
+            <DividendVoucherList
+              companyId={currentId}
+              onCreate={() => { setEditingVoucherId(null); navigate('dividends/new'); }}
+              onEdit={(id) => { setEditingVoucherId(id); navigate('dividends/edit'); }}
+            />
+          } />
+          <Route path="dividends/new" element={
+            <DividendVoucherForm company={session.company} voucherId={null} onSave={() => navigate('..')} onCancel={() => navigate('..')} />
+          } />
+          <Route path="dividends/edit" element={
+            <DividendVoucherForm company={session.company} voucherId={editingVoucherId} onSave={() => navigate('..')} onCancel={() => navigate('..')} />
+          } />
+          <Route path="compliance" element={<ExpenseChecklist data={session.expenseChecklist || defaultExpenseChecklist} onChange={setExpCheck} />} />
+          <Route path="expense_checklist" element={<ExpenseChecklist data={session.expenseChecklist || defaultExpenseChecklist} onChange={setExpCheck} />} />
+          <Route path="checklist" element={<ExpenseChecklist data={session.expenseChecklist || defaultExpenseChecklist} onChange={setExpCheck} />} />
+
+          {/* Shared/Common */}
+          <Route path="filing" element={
+            <FilingPack
+              transactions={session.statementData?.transactions || []}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              summary={session.statementData?.summary || {} as any}
+              pitInput={session.pitInput} citInput={session.citInput} cgtInput={session.cgtInput} whtInput={session.whtInput} vatInput={session.vatInput}
+              checklist={{} as any}
+              filingChecks={session.filingChecks} onFilingChecksChange={setChecks}
+              onNavigate={(view) => {
+                const routeMap: Record<string, string> = {
+                  'transactions': 'transactions',
+                  'expense_checklist': 'compliance',
+                  'dividend_vouchers': 'dividends',
+                };
+                const target = routeMap[view] || view;
+                const prefix = mode === 'personal' ? '/personal' : `/companies/${currentId}`;
+                navigate(`${prefix}/${target}`);
+              }}
+            />
+          } />
+          <Route path="settings" element={<Settings company={session.company} onUpdateCompany={(c) => updateSession(currentId, s => ({ ...s, company: c }))} />} />
+
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
+        </Routes>
+      </Layout>
+    );
   };
 
-  const handleStatementUpdate = (updatedTxns: Transaction[]) => {
-    // Correctly updating nested state logic
-    if (!activeSession.statementData) return;
-    const newData = { ...activeSession.statementData, transactions: updatedTxns };
-
-    // Update session
-    const updatedSessions = { ...sessions, [activeCompanyId]: { ...sessions[activeCompanyId], statementData: newData } };
-    setSessions(updatedSessions);
-    // Also update local view if needed (though session usually drives it)
-    setStatementData(newData);
-  };
-
-
-
-  // Helper for reused components
-  const NoDataFallback = () => (
+  const NoDataFallback = ({ mode }: { mode: string }) => (
     <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
-      <p style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>No data available for {activeSession.company.name}.</p>
-      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-        <button
-          onClick={() => setActiveView('settings')}
-          style={{ padding: '0.5rem 1rem', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', background: 'white' }}
-        >
-          1. Create Company
-        </button>
-        <button
-          onClick={() => setActiveView('upload')}
-          style={{ padding: '0.5rem 1rem', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-        >
-          2. Upload Data
-        </button>
-      </div>
+      <p>No data uploaded yet.</p>
+      <button onClick={() => navigate(mode === 'personal' ? '/personal/upload' : '../upload')} style={{ padding: '0.5rem 1rem', background: '#0f172a', color: 'white', borderRadius: '6px' }}>Upload Data</button>
     </div>
   );
 
-  const renderContent = () => {
-    const { statementData, pitInput, citInput, vatInput, checklist } = activeSession;
-
-    switch (activeView) {
-      case 'dashboard':
-        return <Dashboard summary={statementData?.summary || null} onNavigate={setActiveView} />;
-
-      case 'upload':
-        return (
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <h2 style={{ marginBottom: '1rem', color: '#1e293b' }}>Upload Bank Statement</h2>
-            <UploadZone onUpload={handleStatementUpload} />
-          </div>
-        );
-
-      case 'transactions':
-        return statementData ? (
-          <SmartLedger
-            transactions={statementData.transactions}
-            onUpdate={handleStatementUpdate}
-            onNavigate={setActiveView}
-          />
-        ) : <NoDataFallback />;
-
-      case 'analysis_pl':
-        return statementData ? (
-          <ProfitLossAnalysis
-            transactions={statementData.transactions}
-            onNavigate={setActiveView}
-          />
-        ) : <NoDataFallback />;
-
-      case 'analysis_tax_year': return statementData ? <TaxYearSplit transactions={statementData.transactions} /> : <NoDataFallback />;
-      case 'analysis_dla': return statementData ? <DirectorLoanAccount transactions={statementData.transactions} onNavigate={setActiveView} /> : <NoDataFallback />;
-
-      case 'tax_pit': return <TaxPIT transactions={statementData?.transactions || []} savedInput={pitInput} onSave={setPitInput} onNavigate={setActiveView} expenseChecklist={activeSession.expenseChecklist} />;
-      case 'tax_cit': return <TaxCIT transactions={statementData?.transactions || []} savedInput={citInput} onSave={setCitInput} onNavigate={setActiveView} expenseChecklist={activeSession.expenseChecklist} />;
-      case 'tax_vat': return <TaxVAT transactions={statementData?.transactions || []} savedInput={vatInput} onSave={setVatInput} onNavigate={setActiveView} />;
-
-      case 'dividend_vouchers':
-        return (
-          <DividendVoucherList
-            companyId={activeCompanyId}
-            onCreate={() => { setEditingVoucherId(null); setActiveView('dividend_voucher_form'); }}
-            onEdit={(id) => { setEditingVoucherId(id); setActiveView('dividend_voucher_form'); }}
-          />
-        );
-
-      case 'dividend_voucher_form':
-        return (
-          <DividendVoucherForm
-            company={activeSession.company}
-            voucherId={editingVoucherId}
-            onSave={() => setActiveView('dividend_vouchers')}
-            onCancel={() => setActiveView('dividend_vouchers')}
-          />
-        );
-
-      case 'reports':
-        // Switching to Reports component which is more general
-        return statementData ? (
-          <Reports
-            transactions={statementData.transactions}
-            summary={statementData.summary}
-            pitInput={pitInput}
-            citInput={citInput}
-            vatInput={vatInput}
-          />
-        ) : <NoDataFallback />;
-
-      case 'filing_pack': // Keeping FilingPack accessible if needed via explicit route, though default nav goes here
-        return statementData ? (
-          <FilingPack
-            transactions={statementData.transactions}
-            summary={statementData.summary}
-            pitInput={pitInput}
-            citInput={citInput}
-            vatInput={vatInput}
-            checklist={checklist}
-            filingChecks={activeSession.filingChecks}
-            onFilingChecksChange={setFilingChecks}
-            onChecklistChange={setChecklist}
-            onNavigate={setActiveView}
-          />
-        ) : <NoDataFallback />;
-
-      case 'settings':
-        return <Settings
-          company={activeSession.company}
-          onUpdateCompany={(updatedCompany) => updateSession(s => ({ ...s, company: updatedCompany }))}
-        />;
-
-      case 'expense_checklist':
-        return (
-          <ExpenseChecklist
-            data={activeSession.expenseChecklist}
-            onChange={setExpenseChecklist}
-          />
-        );
-
-      default: return <div>Under Construction</div>;
-    }
-  };
-
   return (
-    <Layout
-      activeView={activeView}
-      onNavigate={setActiveView}
-      activeCompanyId={activeCompanyId}
-      companies={Object.values(sessions).map(s => s.company)}
-      onSwitchCompany={setActiveCompanyId}
-      onAddCompany={handleAddCompany}
-      onLogout={handleLogout}
-    >
-      {renderContent()}
-    </Layout>
+    <Routes>
+      <Route path="/onboarding" element={<Onboarding user={user} onSelectMode={(mode, id) => {
+        if (mode === 'personal') {
+          if (id) navigate('/personal/dashboard');
+          else navigate('/personal/create');
+        } else {
+          if (id === 'new') navigate('/companies/new');
+          else navigate('/companies/select');
+        }
+      }} />} />
+
+      <Route path="/personal/create" element={<PersonalCreate userId={user.id} onComplete={() => navigate('/personal/dashboard')} />} />
+
+      <Route path="/personal/*" element={<RouteWrapper mode="personal" />} />
+
+      <Route path="/companies/select" element={
+        <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
+          <h2>Select Company</h2>
+          {Object.values(sessions).filter(s => s.company.id !== 'personal').map(s => (
+            <div key={s.company.id} onClick={() => navigate(`/companies/${s.company.id}/upload`)} style={{ padding: '1rem', border: '1px solid #ddd', margin: '0.5rem 0', cursor: 'pointer' }}>
+              {s.company.name}
+            </div>
+          ))}
+          <button onClick={() => navigate('/companies/new')} style={{ marginTop: '1rem' }}>+ Create New Company</button>
+        </div>
+      } />
+
+      <Route path="/companies/new" element={
+        <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
+          <h2>Create Company</h2>
+          <button onClick={async () => {
+            const name = prompt("Company Name?");
+            if (name) {
+              try {
+                const id = await handleCreateCompany(name);
+                navigate(`/companies/${id}/upload`);
+              } catch (e) {
+                alert("Failed to create company. Please try again.");
+              }
+            }
+          }}>Start Setup</button>
+        </div>
+      } />
+
+      <Route path="/companies/:companyId/*" element={<RouteWrapper mode="business" />} />
+
+      <Route path="/" element={<Navigate to="/onboarding" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 

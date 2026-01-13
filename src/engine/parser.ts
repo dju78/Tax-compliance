@@ -32,7 +32,6 @@ export function parseCSV(csvContent: string): { transactions: Transaction[], sum
                 date,
                 description,
                 amount,
-                is_business: true,
                 dla_status: 'none',
                 tax_year_label: taxYear,
                 category_name: amount > 0 ? 'Uncategorized Income' : 'Uncategorized Expense',
@@ -57,8 +56,8 @@ function calculateSummary(transactions: Transaction[]): StatementSummary {
         total_outflow,
         net_cash_flow: total_inflow - total_outflow,
         transaction_count: transactions.length,
-        period_start: transactions[0]?.date,
-        period_end: transactions[transactions.length - 1]?.date
+        period_start: transactions[0] ? new Date(transactions[0].date) : undefined,
+        period_end: transactions[transactions.length - 1] ? new Date(transactions[transactions.length - 1].date) : undefined
     };
 }
 

@@ -21,7 +21,15 @@ export function ProfitLossAnalysis({ transactions, onNavigate }: ProfitLossProps
     const { income, expenses, grossProfit, netProfit, drillDownData } = useMemo(() => {
         const filtered = transactions.filter(t => {
             const tYear = t.tax_year_label || new Date(t.date).getFullYear().toString();
-            return tYear === year && !t.excluded_from_tax && !t.category_name?.includes('Director Loan');
+
+            // Exclusions provided by user or logic
+            if (t.excluded_from_tax) return false;
+
+            // Exclude Balance Sheet Items
+            const isLoan = t.tax_tag === 'Owner Loan' || t.category_name?.includes('Director Loan');
+            const isDividendPaid = t.amount < 0 && t.category_name?.toLowerCase().includes('dividend');
+
+            return tYear === year && !isLoan && !isDividendPaid;
         });
 
         const incomeMap = new Map<string, number>();
@@ -73,10 +81,19 @@ export function ProfitLossAnalysis({ transactions, onNavigate }: ProfitLossProps
                         {years.map(y => <option key={y} value={y}>Tax Year {y}</option>)}
                     </select>
 
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem', borderLeft: '1px solid #cbd5e1', paddingLeft: '1rem' }}>
+                    <button onClick={() => onNavigate && onNavigate('analysis/split')} title="Tax Year Split" style={{ background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.5rem', cursor: 'pointer' }}>📅</button>
+                    <button onClick={() => onNavigate && onNavigate('analysis/cashflow')} title="Cash Flow" style={{ background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.5rem', cursor: 'pointer' }}>🌊</button>
+                    <button onClick={() => onNavigate && onNavigate('analysis/statement')} title="Statement of Account" style={{ background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.5rem', cursor: 'pointer' }}>👁️</button>
+                </div>
+
+                <div style={{ marginLeft: '1rem' }}>
                     {onNavigate && (
                         <button
                             onClick={() => onNavigate('tax_cit')}
-                            style={{ marginLeft: '0.5rem', padding: '0.5rem 1rem', background: '#0f172a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                            style={{ padding: '0.5rem 1rem', background: '#0f172a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
                         >
                             Next: Compute CIT →
                         </button>

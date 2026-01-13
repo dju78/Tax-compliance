@@ -1,8 +1,6 @@
-import type { StatementSummary } from '../engine/types';
+import type { StatementSummary, Transaction } from '../engine/types';
 
-
-
-export function Dashboard({ summary, onNavigate }: { summary: StatementSummary | null, onNavigate: (view: string) => void }) {
+export function Dashboard({ summary, transactions, onNavigate }: { summary: StatementSummary | null, transactions: Transaction[], onNavigate: (view: string) => void }) {
 
     if (!summary) {
         return (
@@ -10,17 +8,11 @@ export function Dashboard({ summary, onNavigate }: { summary: StatementSummary |
                 <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '1rem' }}>Welcome to DEAP</h2>
                 <p style={{ color: '#64748b', fontSize: '1.1rem', marginBottom: '2.5rem' }}>Simplified Nigerian Tax Compliance for Modern Businesses.</p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                    <div style={{ padding: '2rem', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'transform 0.2s' }} onClick={() => onNavigate('settings')}>
-                        <span style={{ fontSize: '3rem' }}>🏢</span>
-                        <h3 style={{ margin: '1rem 0 0.5rem' }}>1. Create Company</h3>
-                        <p style={{ color: '#94a3b8' }}>Set up your profile and tax details.</p>
-                    </div>
-
-                    <div style={{ padding: '2rem', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'transform 0.2s' }} onClick={() => onNavigate('upload')}>
-                        <span style={{ fontSize: '3rem' }}>📂</span>
-                        <h3 style={{ margin: '1rem 0 0.5rem' }}>2. Upload Data</h3>
-                        <p style={{ color: '#94a3b8' }}>Import bank statements to begin.</p>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <div style={{ padding: '2rem', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'transform 0.2s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', maxWidth: '400px', width: '100%' }} onClick={() => onNavigate('settings')}>
+                        <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>🏢</span>
+                        <h3 style={{ margin: '0 0 0.5rem', color: '#334155' }}>Create Company / Profile</h3>
+                        <p style={{ color: '#94a3b8', margin: 0 }}>Set up your profile and tax details.</p>
                     </div>
                 </div>
             </div>
@@ -33,45 +25,120 @@ export function Dashboard({ summary, onNavigate }: { summary: StatementSummary |
 
     // Rough Estimates
     const estTaxLiability = Math.max(0, netIncome * 0.3); // 30% CIT placeholder
-    const effectiveTaxRate = totalIncome > 0 ? (estTaxLiability / totalIncome) * 100 : 0;
+
+    // Recent Activity (Last 5 transactions)
+    const recentActivity = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
     return (
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '1.5rem' }}>Compliance Overview</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e293b', margin: 0 }}>Business at a Glance</h2>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={() => onNavigate('upload')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: '600', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>📂</span> Upload
+                    </button>
+                    <button onClick={() => onNavigate('reports')} style={{ padding: '0.5rem 1rem', background: 'var(--color-primary)', border: 'none', borderRadius: '6px', fontWeight: '600', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>📑</span> Reports
+                    </button>
+                </div>
+            </div>
 
             {/* Top Summary Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                <SummaryCard title="Total Income" value={`₦${totalIncome.toLocaleString()}`} color="#10b981" />
-                <SummaryCard title="Total Expenses" value={`₦${totalExpenses.toLocaleString()}`} color="#ef4444" />
-                <SummaryCard title="Est. Tax Liability" value={`₦${estTaxLiability.toLocaleString()}`} color="#f59e0b" subtitle="Based on 30% CIT Rate" />
-                <SummaryCard title="Effective Tax Rate" value={`${effectiveTaxRate.toFixed(1)}%`} color="#6366f1" subtitle="Of Gross Income" />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+                <SummaryCard title="Total Revenue" value={`₦${totalIncome.toLocaleString()}`} color="#10b981" icon="💰" />
+                <SummaryCard title="Total Expenses" value={`₦${totalExpenses.toLocaleString()}`} color="#ef4444" icon="💸" />
+                <SummaryCard title="Est. Tax Liability" value={`₦${estTaxLiability.toLocaleString()}`} color="#f59e0b" subtitle="Based on 30% CIT Rate" icon="🏛️" />
+                <SummaryCard title="Net Profit" value={`₦${netIncome.toLocaleString()}`} color={netIncome >= 0 ? "#6366f1" : "#ef4444"} subtitle="Before Tax" icon="📊" />
             </div>
 
-            {/* Middle Section: Tax Status */}
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#334155', marginBottom: '1rem' }}>Tax Filing Status</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                <StatusCard title="Personal Income Tax (PIT)" status="Needs Review" statusColor="orange" onClick={() => onNavigate('tax_pit')} />
-                <StatusCard title="Company Income Tax (CIT)" status="Incomplete Data" statusColor="red" onClick={() => onNavigate('tax_cit')} />
-                <StatusCard title="Value Added Tax (VAT)" status="Filing Due Soon" statusColor="orange" onClick={() => onNavigate('tax_vat')} />
-            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '2rem', alignItems: 'start' }}>
 
-            {/* Bottom Section: Alerts */}
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#334155', marginBottom: '1rem' }}>Alerts & Action Items</h3>
-            <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                <AlertItem text={`${summary.transaction_count} Uncategorised transactions detected.`} action="Categorize Now" onClick={() => onNavigate('transactions')} />
-                <AlertItem text="Director's Loan Account requires reconciliation." action="Review Ledger" onClick={() => onNavigate('analysis_dla')} />
-            </div>
+                {/* Left Column: Activity & Alerts */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
+                    {/* Tax Status */}
+                    <div>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#334155', marginBottom: '1rem' }}>Compliance Status</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                            <StatusCard title="PIT Filing" status="Review Needed" statusColor="orange" onClick={() => onNavigate('tax_pit')} />
+                            <StatusCard title="CIT Filing" status="Incomplete" statusColor="red" onClick={() => onNavigate('tax_cit')} />
+                            <StatusCard title="CGT Filing" status="Review Needed" statusColor="orange" onClick={() => onNavigate('tax_cgt')} />
+                            <StatusCard title="VAT Filing" status="Due Soon" statusColor="orange" onClick={() => onNavigate('tax_vat')} />
+                        </div>
+                    </div>
+
+                    {/* Recent Activity */}
+                    <div>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#334155', marginBottom: '1rem' }}>Recent Activity</h3>
+                        <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                            {recentActivity.length > 0 ? (
+                                recentActivity.map(t => (
+                                    <div key={t.id} style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: t.amount > 0 ? '#dcfce7' : '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.amount > 0 ? '#166534' : '#991b1b', fontSize: '1.2rem', flexShrink: 0 }}>
+                                                {t.amount > 0 ? '↙' : '↗'}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.95rem' }}>{t.description}</div>
+                                                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{new Date(t.date).toLocaleDateString()} • {t.category_name || 'Uncategorized'}</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ fontWeight: 'bold', color: t.amount > 0 ? '#10b981' : '#1e293b' }}>
+                                            {t.amount > 0 ? '+' : ''}₦{Math.abs(t.amount).toLocaleString()}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>No recent activity found.</div>
+                            )}
+                            <div
+                                onClick={() => onNavigate('transactions')}
+                                style={{ padding: '0.75rem', textAlign: 'center', background: '#f8fafc', color: '#64748b', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', borderTop: '1px solid #e2e8f0' }}
+                            >
+                                View All Transactions →
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                {/* Right Column: Alerts & Quick Links */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+                    {/* Action Items */}
+                    <div>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#334155', marginBottom: '1rem' }}>Action Items</h3>
+                        <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                            {summary.transaction_count > 0 && <AlertItem text={`${summary.transaction_count} Uncategorised transactions`} action="Fix" onClick={() => onNavigate('transactions')} />}
+                            <AlertItem text="Director's Loan Account reconciliation" action="Review" onClick={() => onNavigate('analysis_dla')} />
+                            <AlertItem text="Expense Checklist incomplete" action="Complete" onClick={() => onNavigate('expense_checklist')} />
+                        </div>
+                    </div>
+
+                    {/* Quick Info */}
+                    <div style={{ background: '#f0f9ff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #bae6fd' }}>
+                        <h4 style={{ margin: '0 0 0.5rem', color: '#0369a1', fontSize: '1rem', fontWeight: 'bold' }}>Did you know?</h4>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#0c4a6e', lineHeight: '1.5' }}>
+                            You can tag transactions as "Personal" to automatically exclude them from tax calculations. Check the "Smart Ledger" for details.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
         </div>
     );
 }
 
-function SummaryCard({ title, value, color, subtitle }: { title: string, value: string, color: string, subtitle?: string }) {
+function SummaryCard({ title, value, color, subtitle, icon }: { title: string, value: string, color: string, subtitle?: string, icon?: string }) {
     return (
-        <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.5rem' }}>{title}</p>
-            <p style={{ fontSize: '1.8rem', fontWeight: 'bold', color: color }}>{value}</p>
-            {subtitle && <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.5rem' }}>{subtitle}</p>}
+        <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600', margin: 0 }}>{title}</p>
+                {icon && <span style={{ fontSize: '1.5rem', opacity: 0.8 }}>{icon}</span>}
+            </div>
+            <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: color, margin: 0 }}>{value}</p>
+            {subtitle && <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem', margin: 0 }}>{subtitle}</p>}
         </div>
     );
 }

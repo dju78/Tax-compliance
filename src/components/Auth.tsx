@@ -2,11 +2,14 @@
 import { useState } from 'react';
 import { supabase } from '../supabase';
 
+type AuthView = 'login' | 'signup' | 'reset';
+
 export function Auth() {
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [isLogin, setIsLogin] = useState(true);
+    const [view, setView] = useState<AuthView>('login');
+    const [showPassword, setShowPassword] = useState(false);
     const [message, setMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
 
     const handleAuth = async (e: React.FormEvent) => {
@@ -15,7 +18,13 @@ export function Auth() {
         setMessage(null);
 
         try {
-            if (isLogin) {
+            if (view === 'reset') {
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin,
+                });
+                if (error) throw error;
+                setMessage({ type: 'success', text: 'If an account exists for this email, you will receive a password reset link.' });
+            } else if (view === 'login') {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
                     password,
@@ -38,12 +47,20 @@ export function Auth() {
         }
     };
 
+    const getTitle = () => {
+        switch (view) {
+            case 'login': return 'Sign in to your account';
+            case 'signup': return 'Create a new account';
+            case 'reset': return 'Reset your password';
+        }
+    };
+
     return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f1f5f9' }}>
             <div style={{ width: '100%', maxWidth: '400px', background: 'white', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                     <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#1e293b' }}>DEAP</h1>
-                    <p style={{ color: '#64748b' }}>{isLogin ? 'Sign in to your account' : 'Create a new account'}</p>
+                    <p style={{ color: '#64748b' }}>{getTitle()}</p>
                 </div>
 
                 {message && (
@@ -71,17 +88,50 @@ export function Auth() {
                             style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '1rem' }}
                         />
                     </div>
-                    <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#334155', marginBottom: '0.5rem' }}>Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            minLength={6}
-                            style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '1rem' }}
-                        />
-                    </div>
+
+                    {view !== 'reset' && (
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#334155' }}>Password</label>
+                                {view === 'login' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setView('reset'); setMessage(null); }}
+                                        style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}
+                                    >
+                                        Forgot Password?
+                                    </button>
+                                )}
+                            </div>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    minLength={6}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '1rem' }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '0.75rem',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontSize: '1rem',
+                                        color: '#64748b'
+                                    }}
+                                >
+                                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     <button
                         type="submit"
@@ -99,20 +149,31 @@ export function Auth() {
                             opacity: loading ? 0.7 : 1
                         }}
                     >
-                        {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
+                        {loading ? 'Processing...' : (view === 'login' ? 'Sign In' : (view === 'signup' ? 'Sign Up' : 'Send Reset Link'))}
                     </button>
                 </form>
 
                 <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem', color: '#64748b' }}>
-                    {isLogin ? "Don't have an account? " : "Already have an account? "}
-                    <button
-                        onClick={() => { setIsLogin(!isLogin); setMessage(null); }}
-                        style={{ background: 'none', border: 'none', color: '#0284c7', fontWeight: '600', cursor: 'pointer', padding: 0 }}
-                    >
-                        {isLogin ? 'Sign Up' : 'Sign In'}
-                    </button>
+                    {view === 'login' ? (
+                        <>
+                            Don't have an account?{' '}
+                            <button
+                                onClick={() => { setView('signup'); setMessage(null); }}
+                                style={{ background: 'none', border: 'none', color: '#0284c7', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+                            >
+                                Sign Up
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={() => { setView('login'); setMessage(null); }}
+                            style={{ background: 'none', border: 'none', color: '#0284c7', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+                        >
+                            Back to Sign In
+                        </button>
+                    )}
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

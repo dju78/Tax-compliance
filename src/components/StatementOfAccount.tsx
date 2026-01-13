@@ -12,7 +12,7 @@ export function StatementOfAccount({ transactions, onUpdate, onDownloadExcel }: 
 
     const handleCategoryChange = (id: string, newCategory: string) => {
         const updated = transactions.map(t =>
-            t.id === id ? { ...t, category: newCategory } : t
+            t.id === id ? { ...t, category_name: newCategory } : t
         );
         onUpdate(updated);
     };
@@ -85,7 +85,7 @@ export function StatementOfAccount({ transactions, onUpdate, onDownloadExcel }: 
                                 <td style={{ padding: '0.5rem', color: '#1e293b', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{txn.description}</td>
                                 <td style={{ padding: '0.5rem' }}>
                                     <select
-                                        value={txn.category || (txn.type === 'credit' ? 'Revenue - General' : 'Office Expenses - General')}
+                                        value={txn.category_name || (txn.amount > 0 ? 'Revenue - General' : 'Office Expenses - General')}
                                         onChange={(e) => handleCategoryChange(txn.id, e.target.value)}
                                         style={{ padding: '0.25rem', borderRadius: '4px', border: '1px solid #cbd5e1', width: '100%', fontSize: '0.8rem' }}
                                     >
