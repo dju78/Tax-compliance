@@ -113,7 +113,16 @@ export function TaxSavings({ companyId }: { companyId: string }) {
             1 // numberOfVentures - could be enhanced to detect multiple ventures
         );
 
-        setRecommendations([...reliefs, ...timing, ...structure, ...caps, ...missing, ...opts]);
+        // Combine all recommendations with unique IDs
+        const allRecommendations = [
+            ...reliefs.map((r, i) => ({ ...r, id: `relief-${i}-${r.id}` })),
+            ...timing.map((r, i) => ({ ...r, id: `timing-${i}-${r.id}` })),
+            ...structure.map((r, i) => ({ ...r, id: `structure-${i}-${r.id}` })),
+            ...caps.map((r, i) => ({ ...r, id: `cap-${i}-${r.id}` })),
+            ...missing.map((r, i) => ({ ...r, id: `missing-${i}-${r.id}` })),
+            ...opts.map((r, i) => ({ ...r, id: `opt-${i}-${r.id}` }))
+        ];
+        setRecommendations(allRecommendations);
     };
 
     const totalPotentialSavings = recommendations.reduce((acc, r) => acc + r.potentialSaving, 0);
