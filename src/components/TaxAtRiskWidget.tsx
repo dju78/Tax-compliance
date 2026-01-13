@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabase';
 import type { Transaction } from '../engine/types';
@@ -8,11 +8,7 @@ export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
     const [taxRisk, setTaxRisk] = useState<TaxAtRiskResult | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadTaxRisk();
-    }, [companyId]);
-
-    const loadTaxRisk = async () => {
+    const loadTaxRisk = useCallback(async () => {
         setLoading(true);
         try {
             const { data } = await supabase.from('transactions')
@@ -30,7 +26,11 @@ export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [companyId]);
+
+    useEffect(() => {
+        loadTaxRisk();
+    }, [loadTaxRisk]);
 
     const getSeverityConfig = (severity: 'low' | 'medium' | 'high' | 'critical') => {
         switch (severity) {
