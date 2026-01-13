@@ -590,21 +590,25 @@ export interface TaxAtRiskResult {
 export function calculateTaxAtRisk(transactions: Transaction[]): TaxAtRiskResult {
     const breakdown: TaxAtRiskBreakdown[] = [];
 
+    // Exclude Personal tagged transactions from tax risk calculations
+    // Personal expenses should not be included in business tax calculations
+    const businessTransactions = transactions.filter(t => t.tax_tag !== 'Personal');
+
     // Filter transactions with compliance issues
-    const documentationIssues = transactions.filter(t =>
+    const documentationIssues = businessTransactions.filter(t =>
         t.audit_status === 'fail' || t.audit_status === 'review' ||
         t.allowability_status === 'pending'
     );
 
-    const allowabilityIssues = transactions.filter(t =>
+    const allowabilityIssues = businessTransactions.filter(t =>
         t.allowability_status === 'non_allowable' || t.allowability_status === 'partial'
     );
 
-    const vatIssues = transactions.filter(t =>
+    const vatIssues = businessTransactions.filter(t =>
         t.tax_tag === 'VAT' && (t.audit_status === 'fail' || !t.preview_url)
     );
 
-    const whtIssues = transactions.filter(t =>
+    const whtIssues = businessTransactions.filter(t =>
         t.tax_tag === 'WHT' && (t.audit_status === 'fail' || !t.preview_url)
     );
 
