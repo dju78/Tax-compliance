@@ -785,8 +785,8 @@ function AppContent({ user }: { user: any }) {
       <Route path="/companies/select" element={
         <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
           <h2>Select Company</h2>
-          {Object.values(sessions).filter(s => s.company.id !== 'personal').map((s, idx) => (
-            <div key={`${s.company.id}-${idx}`} onClick={() => navigate(`/companies/${s.company.id}/upload`)} style={{ padding: '1rem', border: '1px solid #ddd', margin: '0.5rem 0', cursor: 'pointer' }}>
+          {Object.values(sessions).filter(s => s.company.id !== 'personal').map(s => (
+            <div key={s.company.id} onClick={() => navigate(`/companies/${s.company.id}/upload`)} style={{ padding: '1rem', border: '1px solid #ddd', margin: '0.5rem 0', cursor: 'pointer' }}>
               {s.company.name}
             </div>
           ))}

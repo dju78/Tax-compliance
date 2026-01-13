@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { supabase } from '../supabase';
 import type { Transaction } from '../engine/types';
 import { calculateTaxAtRisk, type TaxAtRiskResult } from '../engine/taxSavings';
@@ -7,8 +7,6 @@ import { calculateTaxAtRisk, type TaxAtRiskResult } from '../engine/taxSavings';
 export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
     const [taxRisk, setTaxRisk] = useState<TaxAtRiskResult | null>(null);
     const [loading, setLoading] = useState(true);
-    const navigate = useNavigate();
-    const location = useLocation();
 
     useEffect(() => {
         loadTaxRisk();
@@ -136,46 +134,32 @@ export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
                 </div>
             </div>
 
-            {/* Action Button - Only show if not already on compliance page */}
-            {!location.pathname.includes('/compliance') && (
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('🔍 Tax at Risk button clicked!');
-                        console.log('Current path:', location.pathname);
-                        // Determine prefix based on current path
-                        const pathParts = location.pathname.split('/');
-                        const prefix = pathParts[1] === 'personal' ? '/personal' : `/companies/${companyId}`;
-                        const targetPath = `${prefix}/compliance`;
-                        console.log('Navigating to:', targetPath);
-                        navigate(targetPath);
-                    }}
-                    style={{
-                        display: 'inline-block',
-                        marginTop: '1.5rem',
-                        padding: '0.875rem 2rem',
-                        background: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        borderRadius: '8px',
-                        fontWeight: '600',
-                        border: '2px solid white',
-                        transition: 'all 0.2s',
-                        cursor: 'pointer'
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'white';
-                        e.currentTarget.style.color = '#dc2626';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-                        e.currentTarget.style.color = 'white';
-                    }}
-                >
-                    View Full Analysis & Fix Issues →
-                </button>
-            )}
+            {/* Action Button */}
+            <Link
+                to="/expense_audit"
+                style={{
+                    display: 'inline-block',
+                    marginTop: '1.5rem',
+                    padding: '0.875rem 2rem',
+                    background: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    fontWeight: '600',
+                    border: '2px solid white',
+                    transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'white';
+                    e.currentTarget.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                    e.currentTarget.style.color = 'white';
+                }}
+            >
+                View Full Analysis & Fix Issues →
+            </Link>
         </div>
     );
 }
