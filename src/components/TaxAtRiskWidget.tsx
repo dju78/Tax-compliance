@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabase';
 import type { Transaction } from '../engine/types';
 import { calculateTaxAtRisk, type TaxAtRiskResult } from '../engine/taxSavings';
@@ -7,6 +7,8 @@ import { calculateTaxAtRisk, type TaxAtRiskResult } from '../engine/taxSavings';
 export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
     const [taxRisk, setTaxRisk] = useState<TaxAtRiskResult | null>(null);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
+    const location = useLocation();
 
     useEffect(() => {
         loadTaxRisk();
@@ -135,8 +137,13 @@ export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
             </div>
 
             {/* Action Button */}
-            <Link
-                to="compliance"
+            <button
+                onClick={() => {
+                    // Determine prefix based on current path
+                    const pathParts = location.pathname.split('/');
+                    const prefix = pathParts[1] === 'personal' ? '/personal' : `/companies/${companyId}`;
+                    navigate(`${prefix}/compliance`);
+                }}
                 style={{
                     display: 'inline-block',
                     marginTop: '1.5rem',
@@ -144,10 +151,10 @@ export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
                     background: 'rgba(255,255,255,0.2)',
                     color: 'white',
                     borderRadius: '8px',
-                    textDecoration: 'none',
                     fontWeight: '600',
                     border: '2px solid white',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
+                    cursor: 'pointer'
                 }}
                 onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'white';
@@ -159,7 +166,7 @@ export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
                 }}
             >
                 View Full Analysis & Fix Issues →
-            </Link>
+            </button>
         </div>
     );
 }
