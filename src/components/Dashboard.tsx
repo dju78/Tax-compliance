@@ -105,15 +105,15 @@ export function Dashboard({ summary, transactions, onNavigate }: { summary: Stat
                 {/* Right Column: Alerts & Quick Links */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-                    {/* Action Items */}
-                    <div>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#334155', marginBottom: '1rem' }}>Action Items</h3>
-                        <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                            {summary.transaction_count > 0 && <AlertItem text={`${summary.transaction_count} Uncategorised transactions`} action="Fix" onClick={() => onNavigate('transactions')} />}
-                            <AlertItem text="Director's Loan Account reconciliation" action="Review" onClick={() => onNavigate('analysis_dla')} />
-                            <AlertItem text="Expense Checklist incomplete" action="Complete" onClick={() => onNavigate('expense_checklist')} />
+                    {/* Action Items - Only show if there are actual items */}
+                    {(summary.transaction_count > 0) && (
+                        <div>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#334155', marginBottom: '1rem' }}>Action Items</h3>
+                            <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                                {summary.transaction_count > 0 && <AlertItem text={`${summary.transaction_count} Uncategorised transactions`} action="Fix" onClick={() => onNavigate('transactions')} />}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Quick Info */}
                     <div style={{ background: '#f0f9ff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #bae6fd' }}>
