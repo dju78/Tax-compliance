@@ -56,11 +56,11 @@ export function Auth() {
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f1f5f9' }}>
-            <div style={{ width: '100%', maxWidth: '400px', background: 'white', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#1e293b' }}>DEAP</h1>
-                    <p style={{ color: '#64748b' }}>{getTitle()}</p>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f8fafc' }}>
+            <div style={{ width: '100%', maxWidth: '600px', background: 'white', padding: '4rem', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', border: '1px solid #e2e8f0' }}>
+                <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+                    <h1 style={{ fontSize: '3rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '0.5rem' }}>DEAP</h1>
+                    <p style={{ color: '#64748b', fontSize: '1.2rem' }}>{getTitle()}</p>
                 </div>
 
                 {message && (

@@ -4,8 +4,15 @@ export interface Transaction {
     id: string; // UUID
 
     // Scoping (One must be set)
-    company_id?: string;
-    personal_profile_id?: string;
+    company_id?: string | null;
+    personal_profile_id?: string | null;
+
+    // Compliance / Audit Fields
+    allowable_amount?: number;
+    allowability_status?: 'allowable' | 'partial' | 'non_allowable' | 'reclassified' | 'pending';
+    audit_status?: 'pass' | 'fail' | 'review' | 'pending';
+    audit_notes?: string;
+    compliance_score?: number;
 
     date: Date | string; // Supabase returns string dates
     description: string;

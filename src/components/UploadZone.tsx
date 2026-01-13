@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { supabase } from '../supabase';
 import { autoCategorize, CATEGORY_RULES } from '../engine/autoCat';
+import { ocrService } from '../services/ocrService';
 import type { Transaction, StatementSummary } from '../engine/types';
 
 interface UploadZoneProps {
@@ -31,26 +32,28 @@ export function UploadZone({ onUpload, companyId, isPersonal }: UploadZoneProps)
     });
 
     const handleFinalizeUpload = async () => {
-        const transactions = reviewTransactions;
-
-        // 1. Prepare DB Payload
-        // 1. Prepare DB Payload
-        const dbPayload = transactions.map(t => ({
-            company_id: isPersonal ? null : companyId,
-            personal_profile_id: isPersonal ? companyId : null,
-            txn_date: new Date(t.date).toISOString(), // Map to DB column
-            description: t.description,
-            amount: t.amount,
-            category_name: t.category_name,
-            dla_status: t.dla_status,
-            tax_tag: t.tax_tag || 'None',
-            source_type: t.source_type,
-            vat_status: 'none', // Default
-            include_in_pit: isPersonal,
-            include_in_cit: !isPersonal
-        }));
-
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("User not found. Please log in again.");
+
+            const transactions = reviewTransactions;
+
+            // 1. Prepare DB Payload
+            const dbPayload = transactions.map(t => ({
+                company_id: isPersonal ? null : companyId,
+                personal_profile_id: isPersonal ? companyId : null,
+                txn_date: new Date(t.date).toISOString(), // Map to DB column
+                description: t.description,
+                amount: t.amount,
+                category_name: t.category_name,
+                dla_status: t.dla_status,
+                tax_tag: t.tax_tag || 'None',
+                source_type: t.source_type,
+                vat_status: 'none', // Default
+                include_in_pit: isPersonal,
+                include_in_cit: !isPersonal,
+                created_by: user.id
+            }));
             // 2. Insert to Supabase
             const { data, error } = await supabase
                 .from('transactions')
@@ -92,9 +95,12 @@ export function UploadZone({ onUpload, companyId, isPersonal }: UploadZoneProps)
             setShowReview(false);
             alert("Transactions saved to database successfully!");
 
-        } catch (err) {
-            console.error("Upload failed:", err);
-            alert("Failed to save transactions. Please try again.");
+        } catch (err: any) {
+            console.error("Upload failed full error:", err);
+
+            const msg = err.message || err.error_description || JSON.stringify(err);
+            const details = err.details || err.hint || '';
+            alert(`Failed to save transactions: ${msg} \n${details}`);
         }
     };
 
@@ -128,51 +134,66 @@ export function UploadZone({ onUpload, companyId, isPersonal }: UploadZoneProps)
         }
     }, []);
 
-    const handleFiles = useCallback((files: File[]) => {
+    const [processingFile, setProcessingFile] = useState<boolean>(false);
+
+    const handleFiles = useCallback(async (files: File[]) => {
+        setProcessingFile(true);
         const docTransactions: Transaction[] = [];
         let dataFile: File | null = null;
 
-        files.forEach(f => {
-            const name = f.name.toLowerCase();
-            if (name.endsWith('.csv') || name.endsWith('.xlsx') || name.endsWith('.xls')) {
-                if (!dataFile) dataFile = f; // Only take first data file for mapping
-            } else if (name.endsWith('.pdf') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png')) {
-                // Batch create placeholders
-                const previewUrl = URL.createObjectURL(f);
-                docTransactions.push({
-                    id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    company_id: 'default',
-                    date: new Date(),
-                    description: `Document Upload: ${f.name}`,
-                    amount: 0,
-                    dla_status: 'none',
-                    tax_year_label: new Date().getFullYear().toString(),
-                    category_name: 'Uncategorized Expense',
-                    source_type: documentType,
-                    preview_url: previewUrl,
-                    notes: 'Manual entry required from source document'
-                });
-            }
-        });
+        try {
+            for (const f of files) {
+                const name = f.name.toLowerCase();
+                if (name.endsWith('.csv') || name.endsWith('.xlsx') || name.endsWith('.xls')) {
+                    if (!dataFile) dataFile = f;
+                } else if (name.endsWith('.pdf') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png')) {
 
-        // Upload Docs Batch
-        if (docTransactions.length > 0) {
-            onUpload({
-                transactions: docTransactions,
-                summary: {
-                    total_inflow: 0,
-                    total_outflow: 0,
-                    net_cash_flow: 0,
-                    transaction_count: docTransactions.length,
-                    period_start: new Date(),
-                    period_end: new Date()
+                    let description = `Document Upload: ${f.name}`;
+                    let amount = 0;
+                    let date = new Date();
+                    let notes = 'Manual entry required';
+
+                    // Run OCR if it's a receipt or just an image upload
+                    if (documentType === 'RECEIPT' || documentType === 'OTHER') {
+                        const ocrResult = await ocrService.processReceipt(f);
+                        if (ocrResult.amount) amount = ocrResult.amount;
+                        if (ocrResult.date) date = new Date(ocrResult.date);
+                        if (ocrResult.merchant) description = ocrResult.merchant;
+                        if (ocrResult.text) notes = `OCR Confidence: ${Math.round(ocrResult.confidence)}%`;
+                    }
+
+                    const previewUrl = URL.createObjectURL(f);
+                    docTransactions.push({
+                        id: self.crypto.randomUUID(), // Valid UUID for DB
+                        company_id: 'default',
+                        date: date,
+                        description: description,
+                        amount: amount, // Extracted amount or 0
+                        dla_status: 'none',
+                        tax_year_label: date.getFullYear().toString(),
+                        category_name: 'Uncategorized Expense',
+                        source_type: documentType,
+                        preview_url: previewUrl,
+                        notes: notes
+                    });
                 }
-            });
-        }
+            }
 
-        // Process Data File (CSV/Excel) - Only one at a time for mapping UI
-        if (dataFile) {
-            processDataFile(dataFile);
+            // Upload Docs Batch -> Go to Review Step
+            if (docTransactions.length > 0) {
+                setReviewTransactions(docTransactions);
+                setShowReview(true);
+            }
+
+            if (dataFile) {
+                processDataFile(dataFile);
+            }
+
+        } catch (err) {
+            console.error("File processing error", err);
+            alert("Error processing files");
+        } finally {
+            setProcessingFile(false);
         }
     }, [documentType, onUpload, processDataFile]);
 
@@ -194,7 +215,7 @@ export function UploadZone({ onUpload, companyId, isPersonal }: UploadZoneProps)
         // Transform Raw Rows to Transactions using Mapping
         const transactions: Transaction[] = [];
 
-        rawRows.forEach((row, idx) => {
+        rawRows.forEach((row) => {
             const dateVal = row[headers.indexOf(mapping.date)];
             const descVal = row[headers.indexOf(mapping.description)];
 
@@ -225,7 +246,7 @@ export function UploadZone({ onUpload, companyId, isPersonal }: UploadZoneProps)
             const dateObj = new Date(dateVal as string);
             if (!isNaN(dateObj.getTime()) && !isNaN(amount)) {
                 transactions.push({
-                    id: `txn_${idx}`,
+                    id: self.crypto.randomUUID(), // Valid UUID for internal use
                     company_id: 'default',
                     date: dateObj,
                     description: String(descVal || ''),
@@ -273,11 +294,24 @@ export function UploadZone({ onUpload, companyId, isPersonal }: UploadZoneProps)
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
-                style={{ background: isDragging ? '#f0f9ff' : 'transparent', padding: '2rem', transition: 'background 0.2s' }}
+                style={{
+                    background: isDragging ? '#f0f9ff' : 'transparent',
+                    padding: '4rem', // Increased padding
+                    transition: 'background 0.2s',
+                    minHeight: '400px', // Added min-height
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}
             >
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📂</div>
-                <h3 style={{ color: '#334155', marginBottom: '0.5rem' }}>Drag & drop your {documentType.replace('_', ' ').toLowerCase()} here</h3>
-                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Supports CSV, Excel, PDF, JPG, PNG</p>
+                <div style={{ fontSize: '5rem', marginBottom: '1.5rem' }}>📂</div>
+                <h3 style={{ color: '#334155', marginBottom: '1rem', fontSize: '1.5rem', fontWeight: 'bold' }}>
+                    Drag & drop your {documentType.replace('_', ' ').toLowerCase()} here
+                </h3>
+                <p style={{ color: '#94a3b8', marginBottom: '2rem', fontSize: '1.1rem' }}>
+                    Supports CSV, Excel, PDF, JPG, PNG
+                </p>
 
                 <label style={{
                     background: 'var(--color-primary)',
@@ -414,6 +448,20 @@ export function UploadZone({ onUpload, companyId, isPersonal }: UploadZoneProps)
                                 </div>
                             </div>
                         </div>
+                    </div>
+                )
+            }
+
+            {/* Loading Overlay */
+                processingFile && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+                        flexDirection: 'column'
+                    }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+                        <h3 style={{ color: '#334155' }}>Processing Documents...</h3>
+                        <p style={{ color: '#64748b' }}>Running OCR extraction (this might take a few seconds)</p>
                     </div>
                 )
             }

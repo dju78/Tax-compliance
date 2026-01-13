@@ -11,6 +11,7 @@ interface LayoutProps {
     onAddCompany?: () => void;
     onLogout?: () => void;
     onSwitchMode: (mode: 'personal' | 'business') => void;
+    activeCompanyName?: string;
 }
 
 export function Layout({
@@ -21,7 +22,8 @@ export function Layout({
     onSwitchCompany,
     onAddCompany,
     onLogout,
-    onSwitchMode
+    onSwitchMode,
+    activeCompanyName
 }: LayoutProps) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -52,6 +54,7 @@ export function Layout({
             else if (view === 'analysis_pl') navigate(`${prefix}/analysis`);
             else if (view === 'dividend_vouchers') navigate(`${prefix}/dividends`);
             else if (view === 'expense_checklist') navigate(`${prefix}/compliance`);
+            else if (view === 'tax_savings') navigate(`${prefix}/tax_savings`);
             else if (view === 'settings') navigate(`${prefix}/settings`);
             else if (view === 'help') navigate(`${prefix}/help`);
         }
@@ -109,9 +112,10 @@ export function Layout({
                             <NavItem label="WHT (Withholding)" icon="📉" active={location.pathname.includes('tax/wht')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_wht')} />
                             <NavItem label="CGT (Capital Gains)" icon="📈" active={location.pathname.includes('tax/cgt')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_cgt')} />
                             <NavItem label="VAT Returns" icon="🛒" active={location.pathname.includes('tax/vat')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_vat')} />
+                            <NavItem label="Tax Optimization" icon="💰" active={location.pathname.includes('tax_savings')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('tax_savings')} />
                             <NavItem label="Filing Pack" icon="📦" active={location.pathname.includes('filing')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('filing_pack')} />
                             <NavItem label="Dividend Vouchers" icon="📜" active={location.pathname.includes('dividends')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('dividend_vouchers')} />
-                            <NavItem label="Expense Checklist" icon="✅" active={location.pathname.includes('checklist')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('expense_checklist')} />
+                            <NavItem label="Expense Audit" icon="🔍" active={location.pathname.includes('compliance')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('expense_checklist')} />
                         </>
                     )}
 
@@ -163,7 +167,7 @@ export function Layout({
 
                 {/* Top App Bar */}
                 <header style={{ height: '64px', background: 'white', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                         <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#64748b' }}>☰</button>
 
                         {mode === 'personal' ? (
@@ -199,7 +203,14 @@ export function Layout({
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginLeft: mode === 'personal' ? '1rem' : 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Account:</span>
+                            <span style={{ fontWeight: '600', fontSize: '0.9rem', color: '#334155' }}>
+                                {activeCompanyName || 'Personal Profile'}
+                            </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginLeft: mode === 'personal' ? '0rem' : 0 }}>
                             <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Year:</span>
                             <select style={{ background: 'transparent', border: 'none', fontWeight: '600', fontSize: '0.9rem', color: '#334155', cursor: 'pointer', outline: 'none' }}>
                                 <option>2025 (Jan-Dec)</option>

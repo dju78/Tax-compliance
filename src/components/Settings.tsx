@@ -186,6 +186,19 @@ function CompanyProfileSettings({ company, onSave, canEdit }: { company: Company
                     if (error.code === '42501') throw new Error("Permission Denied: You do not have rights to update this profile.");
                     throw error;
                 }
+            } else if (formData.id === 'personal') {
+                // Personal Profile Save
+                const { error: pError } = await supabase.from('personal_profiles').update({
+                    name: formData.name, // Legal Name
+                    address: formData.address,
+                    tin: formData.tin,
+                    nin: formData.nin,
+                    email: formData.email,
+                    rc_number: formData.rc_number, // BN number if entered
+                    business_type: formData.business_type
+                }).eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+                if (pError) throw pError;
             }
 
             onSave(formData);

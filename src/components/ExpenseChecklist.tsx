@@ -5,7 +5,7 @@ import { calculateDetailedRisk } from '../engine/riskAnalysis';
 import type { AuditInputs } from '../engine/auditRisk';
 import { AuditRiskReport } from './AuditRiskReport';
 import { generateExpenseRiskReportHTML } from '../engine/riskReport';
-import { TaxSavings } from './TaxSavings';
+import { calculateTaxSavings } from '../engine/taxSavings';
 import { YearComparison } from './YearComparison';
 
 interface ExpenseChecklistProps {
@@ -231,11 +231,15 @@ export function ExpenseChecklist({ data, onChange }: ExpenseChecklistProps) {
                         </ul>
                     </div>
 
-                    <TaxSavings
-                        turnover={data.turnover || 0}
-                        totalExpenses={data.totalExpenses || 0}
-                        businessType={data.type === 'SOLE' ? 'SOLE' : 'LTD'}
-                    />
+                    <div style={{ background: '#ecfdf5', padding: '1.5rem', borderRadius: '8px', border: '1px solid #6ee7b7', margin: '1.5rem 0' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#047857', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Potential Tax Savings</div>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#065f46' }}>
+                            ₦{calculateTaxSavings(data.turnover || 0, data.totalExpenses || 0, data.type === 'SOLE' ? 'SOLE' : 'LTD').savings.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#064e3b', marginTop: '0.5rem' }}>
+                            Based on declared expenses vs revenue.
+                        </div>
+                    </div>
 
                     <YearComparison
                         currentExpenses={data.totalExpenses || 0}

@@ -19,12 +19,14 @@ import { FilingPack } from './components/FilingPack';
 import { Settings } from './components/Settings';
 import { DividendVoucherList } from './components/DividendVoucherList';
 import { DividendVoucherForm } from './components/DividendVoucherForm';
-import { ExpenseChecklist } from './components/ExpenseChecklist';
+
 import { StatementOfAccount } from './components/StatementOfAccount';
 import { Onboarding } from './components/Onboarding';
 import { PersonalCreate } from './components/PersonalCreate';
 import { Help } from './components/Help';
 import { Documentation } from './components/Documentation';
+import { ExpenseAudit } from './components/ExpenseAudit';
+import { TaxSavings } from './components/TaxSavings';
 
 import type { AuditInputs } from './engine/auditRisk';
 import type { PitInput } from './engine/pit';
@@ -219,9 +221,15 @@ function AppContent({ user }: { user: any }) {
         newSessions['personal'] = {
           company: {
             id: profileId,
-            name: profile?.full_name || 'Personal Accounts',
+            name: profile?.name || profile?.full_name || 'Personal Accounts',
             entity_type: 'sole_trader',
-            user_id: user.id
+            user_id: user.id,
+            address: profile?.address,
+            rc_number: profile?.rc_number,
+            tin: profile?.tin,
+            email: profile?.email,
+            business_type: profile?.business_type,
+            nin: profile?.nin
           },
           statementData: pStatementData,
           pitInput: personalFilingStatus?.inputs?.pit || defaultPit,
@@ -258,7 +266,7 @@ function AppContent({ user }: { user: any }) {
             }
 
             newSessions[c.id] = {
-              company: c as Company,
+              company: { ...c, name: c.legal_name || c.display_name || 'Unnamed Company' } as Company,
               statementData: cStatementData,
               pitInput: companyFilingStatus?.inputs?.pit || defaultPit, // Company might not have PIT, but keep for type consistency
               citInput: companyFilingStatus?.inputs?.cit || defaultCit,
@@ -303,13 +311,14 @@ function AppContent({ user }: { user: any }) {
   const handleCreateCompany = async (name: string) => {
     if (!user) throw new Error("No user");
 
+
     // Insert into DB
     const { data, error } = await supabase
       .from('companies')
       .insert([{
         user_id: user.id,
-        name,
-        entity_type: 'ltd', // Default for now
+        legal_name: name, // Map to DB column 'legal_name'
+        entity_type: 'ltd',
         created_at: new Date().toISOString()
       }])
       .select()
@@ -319,7 +328,8 @@ function AppContent({ user }: { user: any }) {
       console.error("Create company error:", error);
       throw error;
     }
-    const newCompany = data as Company;
+    // Map DB response to UI model
+    const newCompany = { ...data, name: data.legal_name || data.display_name || name } as Company;
 
     // Update Local State
     setSessions(prev => ({
@@ -534,21 +544,18 @@ function AppContent({ user }: { user: any }) {
       persistFiling(undefined, newVal); // Update checklist
       return { ...s, filingChecks: newVal };
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const setExpCheck = (v: any) => updateSession(currentId, s => {
-      const newVal = typeof v === 'function' ? v(s.expenseChecklist || defaultExpenseChecklist) : v;
-      persistFiling({ expense: newVal });
-      return { ...s, expenseChecklist: newVal };
-    });
 
-    const handleStatementUpload = (data: { transactions: Transaction[], summary: StatementSummary }) => {
+
+    const handleStatementUpload = async (data: { transactions: Transaction[], summary: StatementSummary }) => {
+      // UploadZone now handles persistence. We just update local state.
+
+      // We keep the full 't' (including preview_url) for local session display this run
       const taggedTransactions = data.transactions.map(t => ({
         ...t,
-        company_id: currentId,
-        category_name: t.category_name
+        company_id: mode === 'personal' ? null : session.company.id,
+        personal_profile_id: mode === 'personal' ? session.company.id : null,
       }));
 
-      // Merge and update
       const existingTxns = sessions[currentId].statementData?.transactions || [];
       const newTxns = [...existingTxns, ...taggedTransactions];
 
@@ -563,6 +570,7 @@ function AppContent({ user }: { user: any }) {
       <Layout
         mode={mode}
         activeCompanyId={mode === 'business' ? currentId : undefined}
+        activeCompanyName={session.company.name}
         companies={availableCompanies}
         onSwitchCompany={(id) => navigate(`/companies/${id}/dashboard`)}
         onAddCompany={() => navigate('/companies/new')}
@@ -623,8 +631,8 @@ function AppContent({ user }: { user: any }) {
                 onSaveBulk={async (txns) => {
                   const payload = txns.map(t => ({
                     id: t.id,
-                    company_id: session.company.id === 'personal' ? null : session.company.id, // Should match existing
-                    personal_profile_id: session.company.id === 'personal' ? session.company.id : null,
+                    company_id: mode === 'personal' ? null : session.company.id,
+                    personal_profile_id: mode === 'personal' ? session.company.id : null,
                     // We only really need to update the changed fields, but upsert needs Primary Key + fields
                     // Safer to map all editable fields
                     category_name: t.category_name,
@@ -674,6 +682,7 @@ function AppContent({ user }: { user: any }) {
             if (view === 'filing_pack') navigate(mode === 'personal' ? '/personal/filing' : `/companies/${currentId}/filing`);
             else navigate(view);
           }} />} />
+          <Route path="compliance" element={<ExpenseAudit companyId={currentId} isPersonal={true} />} />
 
           {/* Business Routes */}
           <Route path="analysis" element={session.statementData ? (
@@ -717,11 +726,11 @@ function AppContent({ user }: { user: any }) {
           <Route path="dividends/edit" element={
             <DividendVoucherForm company={session.company} voucherId={editingVoucherId} onSave={() => navigate('..')} onCancel={() => navigate('..')} />
           } />
-          <Route path="compliance" element={<ExpenseChecklist data={session.expenseChecklist || defaultExpenseChecklist} onChange={setExpCheck} />} />
-          <Route path="expense_checklist" element={<ExpenseChecklist data={session.expenseChecklist || defaultExpenseChecklist} onChange={setExpCheck} />} />
-          <Route path="checklist" element={<ExpenseChecklist data={session.expenseChecklist || defaultExpenseChecklist} onChange={setExpCheck} />} />
+          <Route path="compliance" element={<ExpenseAudit companyId={currentId} isPersonal={false} />} />
+          <Route path="expense_checklist" element={<ExpenseAudit companyId={currentId} isPersonal={false} />} />
 
           {/* Shared/Common */}
+          <Route path="tax_savings" element={<TaxSavings companyId={currentId} />} />
           <Route path="filing" element={
             <FilingPack
               transactions={session.statementData?.transactions || []}
@@ -792,10 +801,12 @@ function AppContent({ user }: { user: any }) {
             const name = prompt("Company Name?");
             if (name) {
               try {
+                console.log("Creating company for user:", user.id);
                 const id = await handleCreateCompany(name);
                 navigate(`/companies/${id}/upload`);
-              } catch (e) {
-                alert("Failed to create company. Please try again.");
+              } catch (e: any) {
+                console.error("Setup error:", e);
+                alert(`Failed to create company: ${e.message || e.error_description || JSON.stringify(e)}`);
               }
             }
           }}>Start Setup</button>

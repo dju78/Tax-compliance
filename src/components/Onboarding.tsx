@@ -32,7 +32,13 @@ export function Onboarding({ user, onSelectMode }: OnboardingProps) {
                 .eq('user_id', user.id); // Validated by RLS
 
             if (profile) setPersonalProfile(profile);
-            if (userCompanies) setCompanies(userCompanies);
+            if (userCompanies) {
+                const mappedCompanies = userCompanies.map((c: any) => ({
+                    ...c,
+                    name: c.legal_name || c.display_name || c.trading_name || 'Unnamed Company'
+                }));
+                setCompanies(mappedCompanies);
+            }
             setLoading(false);
         };
         fetchContext();
