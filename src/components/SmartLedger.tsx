@@ -338,6 +338,7 @@ export function SmartLedger({ transactions, onUpdate, onNavigate, onSave, onSave
                                         >
                                             <option value="None">None</option>
                                             <option value="VAT">VAT</option>
+                                            <option value="Personal">Personal</option>
                                             <option value="WHT">WHT</option>
                                             <option value="Non-deductible">Non-deductible</option>
                                             <option value="Owner Loan">Owner Loan</option>
