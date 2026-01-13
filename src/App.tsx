@@ -753,7 +753,7 @@ function AppContent({ user }: { user: any }) {
           } />
           <Route path="settings" element={<Settings company={session.company} onUpdateCompany={(c) => updateSession(currentId, s => ({ ...s, company: c }))} />} />
 
-          <Route path="*" element={<Navigate to="dashboard" replace />} />
+          <Route path="*" element={<Navigate to={`${prefix}/dashboard`} replace />} />
         </Routes>
       </Layout>
     );
