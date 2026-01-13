@@ -12,7 +12,9 @@ interface SettingsProps {
 
 export function Settings({ company, onUpdateCompany }: SettingsProps) {
     const { role, loading } = useUserRole();
-    const [activeTab, setActiveTab] = useState<'profile' | 'tax_year' | 'categories' | 'rules' | 'users'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'tax_year' | 'categories' | 'rules' | 'users' | 'companies'>('profile');
+    const [allCompanies, setAllCompanies] = useState<Company[]>([]);
+    const [loadingCompanies, setLoadingCompanies] = useState(false);
 
     // Default to viewer if role missing or null
     const currentRole = role || 'viewer';
@@ -57,6 +59,8 @@ export function Settings({ company, onUpdateCompany }: SettingsProps) {
                 ) : (
                     <LockedTab label="Users & Roles" />
                 )}
+
+                <TabButton label="Manage Companies" isActive={activeTab === 'companies'} onClick={() => setActiveTab('companies')} />
             </div>
 
             {/* Content Area */}
@@ -72,6 +76,7 @@ export function Settings({ company, onUpdateCompany }: SettingsProps) {
                 {activeTab === 'categories' && canReadCats && <CategorySettings canEdit={hasPermission(currentRole, 'categories', 'write')} />}
                 {activeTab === 'rules' && canReadRules && <AutoCatRules canEdit={hasPermission(currentRole, 'autoCategorisation', 'write')} />}
                 {activeTab === 'users' && canReadUsers && <UserRoleSettings canEdit={hasPermission(currentRole, 'usersRoles', 'write')} />}
+                {activeTab === 'companies' && <CompanyManagement allCompanies={allCompanies} setAllCompanies={setAllCompanies} loadingCompanies={loadingCompanies} setLoadingCompanies={setLoadingCompanies} currentCompanyId={company.id} />}
 
                 {!canReadProfile && activeTab === 'profile' && <div>Access Denied</div>}
             </div>
@@ -529,4 +534,169 @@ function InputGroup({ label, placeholder, type = 'text', value, onChange, error,
             {complianceNote && <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>{complianceNote}</span>}
         </div>
     )
+}
+
+// Company Management Component
+function CompanyManagement({ allCompanies, setAllCompanies, loadingCompanies, setLoadingCompanies, currentCompanyId }: {
+    allCompanies: Company[];
+    setAllCompanies: (companies: Company[]) => void;
+    loadingCompanies: boolean;
+    setLoadingCompanies: (loading: boolean) => void;
+    currentCompanyId: string;
+}) {
+    const [deleting, setDeleting] = useState<string | null>(null);
+
+    useEffect(() => {
+        loadCompanies();
+    }, []);
+
+    const loadCompanies = async () => {
+        setLoadingCompanies(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('companies')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            if (data) setAllCompanies(data as Company[]);
+        } catch (err) {
+            console.error('Error loading companies:', err);
+        } finally {
+            setLoadingCompanies(false);
+        }
+    };
+
+    const handleDeleteCompany = async (companyId: string, companyName: string) => {
+        if (companyId === currentCompanyId) {
+            alert('You cannot delete the currently active company. Please switch to another company first.');
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to delete "${companyName}"?\n\nThis will permanently delete:\n- All transactions\n- All filing data\n- All settings\n\nThis action cannot be undone.`
+        );
+
+        if (!confirmed) return;
+
+        setDeleting(companyId);
+        try {
+            // Delete company (cascading deletes will handle related data)
+            const { error } = await supabase
+                .from('companies')
+                .delete()
+                .eq('id', companyId);
+
+            if (error) throw error;
+
+            // Reload companies list
+            await loadCompanies();
+            alert('Company deleted successfully!');
+        } catch (err) {
+            console.error('Error deleting company:', err);
+            alert('Failed to delete company. Please try again.');
+        } finally {
+            setDeleting(null);
+        }
+    };
+
+    if (loadingCompanies) {
+        return <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>Loading companies...</div>;
+    }
+
+    return (
+        <div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '1rem' }}>
+                Manage Companies
+            </h3>
+            <p style={{ color: '#64748b', marginBottom: '2rem' }}>
+                View and manage all your companies. You can delete duplicate or unused companies here.
+            </p>
+
+            {allCompanies.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', background: '#f8fafc', borderRadius: '8px', color: '#64748b' }}>
+                    No companies found.
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {allCompanies.map(comp => (
+                        <div
+                            key={comp.id}
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '1.5rem',
+                                background: comp.id === currentCompanyId ? '#f0fdf4' : 'white',
+                                border: comp.id === currentCompanyId ? '2px solid #166534' : '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                    <h4 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1e293b', margin: 0 }}>
+                                        {comp.name}
+                                    </h4>
+                                    {comp.id === currentCompanyId && (
+                                        <span style={{
+                                            fontSize: '0.7rem',
+                                            fontWeight: '600',
+                                            padding: '0.2rem 0.5rem',
+                                            background: '#166534',
+                                            color: 'white',
+                                            borderRadius: '4px'
+                                        }}>
+                                            ACTIVE
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                    {comp.entity_type && <span>Type: {comp.entity_type} • </span>}
+                                    {comp.rc_number && <span>RC: {comp.rc_number} • </span>}
+                                    {comp.tin && <span>TIN: {comp.tin}</span>}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                                    ID: {comp.id}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => handleDeleteCompany(comp.id, comp.name)}
+                                disabled={deleting === comp.id || comp.id === currentCompanyId}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    background: comp.id === currentCompanyId ? '#e2e8f0' : '#fee2e2',
+                                    color: comp.id === currentCompanyId ? '#94a3b8' : '#dc2626',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontWeight: '600',
+                                    fontSize: '0.85rem',
+                                    cursor: comp.id === currentCompanyId ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s',
+                                    opacity: deleting === comp.id ? 0.5 : 1
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (comp.id !== currentCompanyId) {
+                                        e.currentTarget.style.background = '#fecaca';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (comp.id !== currentCompanyId) {
+                                        e.currentTarget.style.background = '#fee2e2';
+                                    }
+                                }}
+                            >
+                                {deleting === comp.id ? 'Deleting...' : '🗑️ Delete'}
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 }
