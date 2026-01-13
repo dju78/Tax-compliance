@@ -138,11 +138,18 @@ export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
 
             {/* Action Button */}
             <button
-                onClick={() => {
+                type="button"
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🔍 Tax at Risk button clicked!');
+                    console.log('Current path:', location.pathname);
                     // Determine prefix based on current path
                     const pathParts = location.pathname.split('/');
                     const prefix = pathParts[1] === 'personal' ? '/personal' : `/companies/${companyId}`;
-                    navigate(`${prefix}/compliance`);
+                    const targetPath = `${prefix}/compliance`;
+                    console.log('Navigating to:', targetPath);
+                    navigate(targetPath);
                 }}
                 style={{
                     display: 'inline-block',
