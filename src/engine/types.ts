@@ -24,7 +24,7 @@ export interface Transaction {
 
     // Tax Attributes
     tax_year_label?: string; // "2025"
-    tax_tag?: 'VAT' | 'WHT' | 'Non-deductible' | 'Owner Loan' | 'Capital Gain' | 'None';
+    tax_tag?: 'VAT' | 'WHT' | 'Personal' | 'Non-deductible' | 'Owner Loan' | 'Capital Gain' | 'None';
     dla_status: 'none' | 'potential' | 'confirmed';
     excluded_from_tax?: boolean;
 
