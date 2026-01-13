@@ -314,7 +314,7 @@ export function ExpenseAudit({ companyId, isPersonal }: { companyId: string, isP
                             <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8' }}>No issues found.</div>
                         ) : (
                             auditLogs.map((log, idx) => (
-                                <div key={idx} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #f1f5f9' }}>
+                                <div key={`${log.ruleCode}-${idx}`} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #f1f5f9' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: log.severity === 'critical' ? '#ef4444' : '#f59e0b' }}>
                                             {log.ruleCode}
