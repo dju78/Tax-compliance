@@ -166,7 +166,7 @@ export function TaxSavings({ companyId }: { companyId: string }) {
             </div>
 
             {/* Savings Hero */}
-            <div style={{
+            <div className="glass-panel" style={{
                 background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
                 padding: '2rem', borderRadius: '16px', color: 'white', marginBottom: '2rem',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between'
@@ -402,7 +402,7 @@ function RecommendationCard({ item }: { item: SavingsRecommendation }) {
     const borderColor = isHighConf ? '#22c55e' : item.confidence === 'medium' ? '#f59e0b' : '#cbd5e1';
 
     return (
-        <div style={{
+        <div className="glass-panel" style={{
             background: 'white', borderRadius: '12px', padding: '1.5rem',
             borderLeft: `5px solid ${borderColor}`,
             boxShadow: '0 1px 3px rgba(0,0,0,0.05)'

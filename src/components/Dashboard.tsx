@@ -132,7 +132,7 @@ export function Dashboard({ summary, transactions, onNavigate }: { summary: Stat
 
 function SummaryCard({ title, value, color, subtitle, icon }: { title: string, value: string, color: string, subtitle?: string, icon?: string }) {
     return (
-        <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'relative', overflow: 'hidden' }}>
+        <div className="glass-panel" style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'relative', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
                 <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '600', margin: 0 }}>{title}</p>
                 {icon && <span style={{ fontSize: '1.5rem', opacity: 0.8 }}>{icon}</span>}
@@ -155,7 +155,7 @@ function StatusCard({ title, status, statusColor, onClick }: { title: string, st
     const tx = colors['text' + statusColor.charAt(0).toUpperCase() + statusColor.slice(1)] || colors.textGray;
 
     return (
-        <div onClick={onClick} style={{ background: 'white', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: onClick ? 'pointer' : 'default' }}>
+        <div onClick={onClick} className="glass-panel" style={{ background: 'white', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: onClick ? 'pointer' : 'default' }}>
             <span style={{ fontWeight: '600', color: '#334155' }}>{title}</span>
             <span style={{ background: bg, color: tx, padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                 {status}

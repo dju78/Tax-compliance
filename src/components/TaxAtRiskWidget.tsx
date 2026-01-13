@@ -79,7 +79,7 @@ export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
     const severityConfig = getSeverityConfig(taxRisk.severityLevel);
 
     return (
-        <div style={{
+        <div className="glass-panel" style={{
             background: severityConfig.gradient,
             borderRadius: '16px',
             padding: '2rem',
