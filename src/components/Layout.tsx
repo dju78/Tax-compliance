@@ -193,8 +193,8 @@ export function Layout({
                                         style={{ background: 'transparent', border: 'none', fontWeight: '600', fontSize: '0.9rem', color: '#334155', cursor: 'pointer', outline: 'none' }}
                                     >
                                         <option value="" disabled>Select Company</option>
-                                        {companies.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        {companies.map((c, idx) => (
+                                            <option key={`${c.id}-${idx}`} value={c.id}>{c.name}</option>
                                         ))}
                                         <option disabled>──────────</option>
                                         <option value="ADD_NEW">+ Add Company</option>
