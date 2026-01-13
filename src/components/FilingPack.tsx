@@ -197,16 +197,33 @@ export function FilingPack({ transactions, summary, pitInput, citInput, cgtInput
                                 style={{
                                     width: '100%',
                                     padding: '1rem',
-                                    background: (isBlocked || readinessStatus === 'AMBER') ? '#cbd5e1' : '#0f172a',
+                                    background: readinessStatus === 'GREEN' ? 'linear-gradient(135deg, #166534 0%, #15803d 100%)' : '#cbd5e1',
                                     color: 'white',
-                                    border: 'none',
+                                    border: readinessStatus === 'GREEN' ? '2px solid #22c55e' : 'none',
                                     borderRadius: '8px',
                                     fontWeight: 'bold',
+                                    fontSize: '1rem',
                                     cursor: (isBlocked || readinessStatus === 'AMBER') ? 'not-allowed' : 'pointer',
-                                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem'
+                                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem',
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: readinessStatus === 'GREEN' ? '0 4px 12px rgba(22, 101, 52, 0.3)' : 'none',
+                                    transform: readinessStatus === 'GREEN' ? 'scale(1)' : 'scale(1)'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (readinessStatus === 'GREEN') {
+                                        e.currentTarget.style.transform = 'scale(1.02)';
+                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(22, 101, 52, 0.4)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (readinessStatus === 'GREEN') {
+                                        e.currentTarget.style.transform = 'scale(1)';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 101, 52, 0.3)';
+                                    }
                                 }}
                             >
-                                <span>🔐</span> Save Snapshot for Accountant
+                                <span>{readinessStatus === 'GREEN' ? '✅' : '🔐'}</span>
+                                {readinessStatus === 'GREEN' ? 'Save Snapshot for Accountant (Ready!)' : 'Save Snapshot for Accountant (Complete Checks First)'}
                             </button>
                         </div>
                     </div>
