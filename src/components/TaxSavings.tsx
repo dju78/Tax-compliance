@@ -202,7 +202,7 @@ export function TaxSavings({ companyId }: { companyId: string }) {
                         {/* Mobile: Collapsible */}
                         <div className="mobile-breakdown" style={{ display: 'grid', gap: '0.75rem' }}>
                             {taxAtRisk.breakdown.map(item => (
-                                <div key={item.category} style={{
+                                <div key={`mobile-${item.category}`} style={{
                                     background: 'rgba(255,255,255,0.1)',
                                     borderRadius: '8px',
                                     overflow: 'hidden'
@@ -265,7 +265,7 @@ export function TaxSavings({ companyId }: { companyId: string }) {
                         <div className="desktop-breakdown" style={{ display: 'none' }}>
                             <div style={{ display: 'grid', gap: '1rem' }}>
                                 {taxAtRisk.breakdown.map(item => (
-                                    <div key={item.category} style={{
+                                    <div key={`desktop-${item.category}`} style={{
                                         display: 'grid',
                                         gridTemplateColumns: '120px 1fr 150px 150px',
                                         alignItems: 'center',
