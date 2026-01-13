@@ -563,8 +563,14 @@ function AppContent({ user }: { user: any }) {
       navigate(mode === 'personal' ? '/personal/transactions' : `/companies/${currentId}/transactions`);
     };
 
-    // Filter companies for the dropdown
-    const availableCompanies = Object.values(sessions).filter(s => s.company.id !== 'personal').map(s => s.company);
+    // Filter companies for the dropdown - deduplicate by company ID
+    const availableCompanies = Array.from(
+      new Map(
+        Object.values(sessions)
+          .filter(s => s.company.id !== 'personal')
+          .map(s => [s.company.id, s.company])
+      ).values()
+    );
 
     return (
       <Layout
