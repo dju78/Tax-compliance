@@ -238,7 +238,7 @@ export function ExpenseAudit({ companyId, isPersonal }: { companyId: string, isP
                             </div>
                         ) : (
                             auditItems.map((item, idx) => (
-                                <div key={idx} style={{
+                                <div key={`${item.transactionId}-${item.requiredDocType}-${idx}`} style={{
                                     background: 'white', borderRadius: '12px', padding: '1.5rem',
                                     border: item.status === 'missing' ? '1px solid #fecaca' : '1px solid #e2e8f0',
                                     borderLeft: item.status === 'missing' ? '4px solid #ef4444' : item.status === 'verified' ? '4px solid #166534' : '4px solid #e2e8f0',
