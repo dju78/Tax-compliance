@@ -19,7 +19,7 @@ export function AuditRiskReport({ result }: AuditRiskReportProps) {
     const color = getColor(level);
 
     return (
-        <div style={{ background: 'white', borderRadius: '12px', border: `1px solid ${color}`, overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+        <div className="glass-panel" style={{ background: 'white', borderRadius: '12px', border: `1px solid ${color}`, overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
             <div style={{ padding: '1.5rem', background: `${color}10`, borderBottom: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1e293b', margin: 0 }}>Audit Risk Report</h3>

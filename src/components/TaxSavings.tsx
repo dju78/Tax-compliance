@@ -185,7 +185,7 @@ export function TaxSavings({ companyId }: { companyId: string }) {
 
             {/* Tax at Risk Alert */}
             {taxAtRisk && taxAtRisk.totalAtRisk > 0 && (
-                <div style={{
+                <div className="glass-panel" style={{
                     background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
                     padding: '2rem', borderRadius: '16px', color: 'white', marginBottom: '2rem',
                     boxShadow: '0 10px 40px rgba(220, 38, 38, 0.3)'
@@ -402,7 +402,7 @@ function RecommendationCard({ item }: { item: SavingsRecommendation }) {
     const borderColor = isHighConf ? '#22c55e' : item.confidence === 'medium' ? '#f59e0b' : '#cbd5e1';
 
     return (
-        <div className="glass-panel" style={{
+        <div style={{
             background: 'white', borderRadius: '12px', padding: '1.5rem',
             borderLeft: `5px solid ${borderColor}`,
             boxShadow: '0 1px 3px rgba(0,0,0,0.05)'

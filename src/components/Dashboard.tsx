@@ -155,7 +155,7 @@ function StatusCard({ title, status, statusColor, onClick }: { title: string, st
     const tx = colors['text' + statusColor.charAt(0).toUpperCase() + statusColor.slice(1)] || colors.textGray;
 
     return (
-        <div onClick={onClick} className="glass-panel" style={{ background: 'white', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: onClick ? 'pointer' : 'default' }}>
+        <div onClick={onClick} style={{ background: 'white', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: onClick ? 'pointer' : 'default' }}>
             <span style={{ fontWeight: '600', color: '#334155' }}>{title}</span>
             <span style={{ background: bg, color: tx, padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                 {status}
