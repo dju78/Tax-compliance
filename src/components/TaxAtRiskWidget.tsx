@@ -136,7 +136,7 @@ export function TaxAtRiskWidget({ companyId }: { companyId: string }) {
 
             {/* Action Button */}
             <Link
-                to="/compliance"
+                to="compliance"
                 style={{
                     display: 'inline-block',
                     marginTop: '1.5rem',
