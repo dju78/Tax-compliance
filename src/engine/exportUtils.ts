@@ -220,7 +220,7 @@ export function exportToExcelAdvanced(
             'Description': t.description,
             'Amount': Math.abs(t.amount),
             'Category': t.category_name || 'Uncategorized',
-            'Deductible': (t.tax_tag === 'Non-deductible' || t.tax_tag === 'Non-Deductible') ? 'No' : 'Yes'
+            'Deductible': t.tax_tag === 'Non-deductible' ? 'No' : 'Yes'
         }));
     const wsExpense = XLSX.utils.json_to_sheet(expenseData);
     XLSX.utils.book_append_sheet(wb, wsExpense, 'Expenses');
