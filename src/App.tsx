@@ -27,6 +27,10 @@ import { Help } from './components/Help';
 import { Documentation } from './components/Documentation';
 import { ExpenseAudit } from './components/ExpenseAudit';
 import { TaxSavings } from './components/TaxSavings';
+import { ComplianceTracker } from './components/ComplianceTracker';
+import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { ExportCenter } from './components/ExportCenter';
+import { TeamManagement } from './components/TeamManagement';
 
 import type { AuditInputs } from './engine/auditRisk';
 import type { PitInput } from './engine/pit';
@@ -563,6 +567,75 @@ function AppContent({ user }: { user: any }) {
       navigate(mode === 'personal' ? '/personal/transactions' : `/companies/${currentId}/transactions`);
     };
 
+    const handleAddTransaction = async (transaction: Partial<Transaction>) => {
+      const s = sessions[currentId];
+      const realId = s.company.id;
+
+      // Generate UUID for new transaction
+      const newId = crypto.randomUUID();
+
+      // Insert into Supabase
+      const { error } = await supabase.from('transactions').insert([{
+        id: newId,
+        company_id: mode === 'personal' ? null : realId,
+        personal_profile_id: mode === 'personal' ? realId : null,
+        txn_date: transaction.date,
+        description: transaction.description,
+        amount: transaction.amount,
+        category_name: transaction.category_name,
+        tax_tag: transaction.tax_tag,
+        dla_status: transaction.dla_status || 'none',
+        source_type: transaction.source_type || 'MANUAL',
+        created_at: new Date().toISOString()
+      }]);
+
+      if (error) {
+        console.error('Failed to insert transaction:', error);
+        throw error;
+      }
+
+      // Update local state
+      const existingTxns = s.statementData?.transactions || [];
+      const newTxn: Transaction = {
+        id: newId,
+        company_id: mode === 'personal' ? null : realId,
+        personal_profile_id: mode === 'personal' ? realId : null,
+        date: transaction.date as string,
+        description: transaction.description || '',
+        amount: transaction.amount || 0,
+        category_name: transaction.category_name,
+        tax_tag: transaction.tax_tag,
+        dla_status: transaction.dla_status || 'none',
+        source_type: transaction.source_type || 'MANUAL',
+        type: transaction.amount && transaction.amount > 0 ? 'credit' : 'debit'
+      };
+
+      const updatedTxns = [...existingTxns, newTxn].sort((a, b) => {
+        const dA = new Date(a.date).getTime();
+        const dB = new Date(b.date).getTime();
+        return dA - dB;
+      });
+
+      handleTransactionUpdate(updatedTxns);
+    };
+
+    const handleDeleteTransaction = async (id: string) => {
+      // Delete from Supabase
+      const { error } = await supabase.from('transactions').delete().eq('id', id);
+
+      if (error) {
+        console.error('Failed to delete transaction:', error);
+        throw error;
+      }
+
+      // Update local state
+      const s = sessions[currentId];
+      const existingTxns = s.statementData?.transactions || [];
+      const updatedTxns = existingTxns.filter(t => t.id !== id);
+
+      handleTransactionUpdate(updatedTxns);
+    };
+
     // Filter companies for the dropdown - deduplicate by company ID
     const availableCompanies = Array.from(
       new Map(
@@ -650,6 +723,10 @@ function AppContent({ user }: { user: any }) {
                   }));
                   await supabase.from('transactions').upsert(payload);
                 }}
+                onAddTransaction={handleAddTransaction}
+                onDeleteTransaction={handleDeleteTransaction}
+                companyId={currentId}
+                isPersonal={mode === 'personal'}
                 onNavigate={(view) => {
                   if (view === 'analysis_pl') navigate(mode === 'personal' ? '/personal/tax/pit' : `/companies/${currentId}/analysis`);
                   else navigate(view);
@@ -670,7 +747,7 @@ function AppContent({ user }: { user: any }) {
             ) : <NoDataFallback mode={mode} />
           } />
           <Route path="analysis/split" element={<TaxYearSplit transactions={session.statementData?.transactions || []} />} />
-          <Route path="analysis/statement" element={<StatementOfAccount transactions={session.statementData?.transactions || []} onUpdate={handleTransactionUpdate} onDownloadExcel={() => { alert('Use the main Filing Pack to download excel'); }} />} />
+          <Route path="analysis/statement" element={<StatementOfAccount transactions={session.statementData?.transactions || []} onUpdate={handleTransactionUpdate} onDownloadExcel={() => { alert('Use the main Filing Pack to download excel'); }} onAddTransaction={handleAddTransaction} onDeleteTransaction={handleDeleteTransaction} companyId={currentId} isPersonal={mode === 'personal'} />} />
           <Route path="analysis/cashflow" element={<CashFlowStatement transactions={session.statementData?.transactions || []} />} />
           <Route path="help" element={<Help />} />
           <Route path="docs" element={<Documentation />} />
@@ -688,7 +765,7 @@ function AppContent({ user }: { user: any }) {
             if (view === 'filing_pack') navigate(mode === 'personal' ? '/personal/filing' : `/companies/${currentId}/filing`);
             else navigate(view);
           }} />} />
-          <Route path="compliance" element={<ExpenseAudit companyId={currentId} isPersonal={true} />} />
+          <Route path="expense_audit" element={<ExpenseAudit companyId={currentId} isPersonal={true} />} />
 
           {/* Business Routes */}
           <Route path="analysis" element={session.statementData ? (
@@ -732,7 +809,7 @@ function AppContent({ user }: { user: any }) {
           <Route path="dividends/edit" element={
             <DividendVoucherForm company={session.company} voucherId={editingVoucherId} onSave={() => navigate('..')} onCancel={() => navigate('..')} />
           } />
-          <Route path="compliance" element={<ExpenseAudit companyId={currentId} isPersonal={false} />} />
+          <Route path="expense_audit" element={<ExpenseAudit companyId={currentId} isPersonal={false} />} />
           <Route path="expense_checklist" element={<ExpenseAudit companyId={currentId} isPersonal={false} />} />
 
           {/* Shared/Common */}
@@ -748,7 +825,7 @@ function AppContent({ user }: { user: any }) {
               onNavigate={(view) => {
                 const routeMap: Record<string, string> = {
                   'transactions': 'transactions',
-                  'expense_checklist': 'compliance',
+                  'expense_checklist': 'expense_audit',
                   'dividend_vouchers': 'dividends',
                 };
                 const target = routeMap[view] || view;
@@ -758,6 +835,44 @@ function AppContent({ user }: { user: any }) {
             />
           } />
           <Route path="settings" element={<Settings company={session.company} onUpdateCompany={(c) => updateSession(currentId, s => ({ ...s, company: c }))} />} />
+          <Route path="compliance" element={<ComplianceTracker companyId={currentId} isPersonal={false} />} />
+
+          {/* Analytics & Reporting */}
+          <Route path="analytics" element={
+            session.statementData?.summary ? (
+              <AnalyticsDashboard
+                summary={session.statementData.summary}
+                transactions={session.statementData?.transactions || []}
+                companyName={session.company?.name}
+              />
+            ) : (
+              <div style={{ padding: '2rem', textAlign: 'center' }}>Loading analytics...</div>
+            )
+          } />
+
+          {/* Export Center */}
+          <Route path="exports" element={
+            session.statementData?.summary ? (
+              <ExportCenter
+                transactions={session.statementData?.transactions || []}
+                summary={session.statementData.summary}
+                companyName={session.company?.name}
+                citInput={session.citInput}
+                vatInput={session.vatInput}
+              />
+            ) : (
+              <div style={{ padding: '2rem', textAlign: 'center' }}>Loading export center...</div>
+            )
+          } />
+
+          {/* Team Management */}
+          <Route path="team" element={
+            <TeamManagement
+              companyId={currentId}
+              companyName={session.company?.name || 'Your Company'}
+              currentUserRole="owner"
+            />
+          } />
 
           <Route path="*" element={<Navigate to={mode === 'personal' ? '/personal/dashboard' : `/companies/${currentId}/dashboard`} replace />} />
         </Routes>

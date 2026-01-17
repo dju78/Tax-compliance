@@ -164,10 +164,10 @@ function StatusCard({ title, status, statusColor, onClick }: { title: string, st
     );
 }
 
-function AlertItem({ text, action, onClick }: { text: string, action: string, onClick?: () => void }) {
+function AlertItem({ text, action, onClick, isResolved }: { text: string, action: string, onClick?: () => void, isResolved?: boolean }) {
     return (
         <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#475569' }}>⚠️ {text}</span>
+            <span style={{ color: isResolved ? '#15803d' : '#475569' }}>{isResolved ? '✓' : '⚠️'} {text}</span>
             <button onClick={onClick} style={{ color: 'var(--color-primary)', background: 'none', border: 'none', fontWeight: '600', cursor: 'pointer' }}>{action} →</button>
         </div>
     )

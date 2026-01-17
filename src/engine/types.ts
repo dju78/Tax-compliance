@@ -30,6 +30,11 @@ export interface Transaction {
 
     // Meta
     source_type?: 'BANK_UPLOAD' | 'RECEIPT' | 'MANUAL' | 'OTHER';
+
+    // Nigerian Payment Methods
+    payment_method?: 'FLUTTERWAVE' | 'PAYSTACK' | 'INTERSWITCH' | 'BANK_TRANSFER' | 'POS' | 'CASH' | 'OTHER';
+    payment_reference?: string; // Payment ID/Reference from provider
+
     created_at?: string;
     preview_url?: string; // For receipt images/PDFs
     notes?: string;

@@ -33,8 +33,12 @@ export function UploadZone({ onUpload, companyId, isPersonal }: UploadZoneProps)
 
     const handleFinalizeUpload = async () => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("User not found. Please log in again.");
+            // Use getSession() instead of getUser() for more reliable session checking
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError || !session?.user) {
+                throw new Error("Your session has expired. Please refresh the page and log in again.");
+            }
+            const user = session.user;
 
             const transactions = reviewTransactions;
 
@@ -55,6 +59,18 @@ export function UploadZone({ onUpload, companyId, isPersonal }: UploadZoneProps)
                 created_by: user.id
             }));
             // 2. Insert to Supabase
+            // Validate company ownership before insert (RLS will also enforce this)
+            const { data: companyCheck, error: companyError } = await supabase
+                .from('companies')
+                .select('id')
+                .eq('id', companyId)
+                .single();
+
+            if (companyError || !companyCheck) {
+                throw new Error('Access denied: You do not have permission to add transactions to this company');
+            }
+
+            // Insert transactions
             const { data, error } = await supabase
                 .from('transactions')
                 .insert(dbPayload)

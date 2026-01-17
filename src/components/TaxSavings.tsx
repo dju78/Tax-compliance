@@ -61,7 +61,7 @@ export function TaxSavings({ companyId }: { companyId: string }) {
             // Fetch transactions
             const { data } = await supabase.from('transactions')
                 .select('*')
-                .eq('company_id', companyId)
+                .eq('company_id', companyId)  // Filter by company for RLS
                 .lt('amount', 0); // Expenses only for analysis (mostly)
 
             if (data) {

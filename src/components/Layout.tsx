@@ -53,8 +53,9 @@ export function Layout({
             else if (view === 'filing_pack') navigate(`${prefix}/filing`);
             else if (view === 'analysis_pl') navigate(`${prefix}/analysis`);
             else if (view === 'dividend_vouchers') navigate(`${prefix}/dividends`);
-            else if (view === 'expense_checklist') navigate(`${prefix}/compliance`);
+            else if (view === 'expense_checklist') navigate(`${prefix}/expense_audit`);
             else if (view === 'tax_savings') navigate(`${prefix}/tax_savings`);
+            else if (view === 'compliance') navigate(`${prefix}/compliance`);
             else if (view === 'settings') navigate(`${prefix}/settings`);
             else if (view === 'help') navigate(`${prefix}/help`);
         }
@@ -120,6 +121,7 @@ export function Layout({
                     )}
 
                     <div style={{ margin: '1rem 0 0.5rem 1rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>System</div>
+                    <NavItem label="Compliance" icon="📋" active={location.pathname.includes('/compliance')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('compliance')} />
                     <NavItem label="Settings" icon="⚙️" active={location.pathname.includes('settings')} sidebarOpen={sidebarOpen} onClick={() => handleNavigate('settings')} />
 
                     <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
