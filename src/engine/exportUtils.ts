@@ -220,7 +220,7 @@ export function exportToExcelAdvanced(
             'Description': t.description,
             'Amount': Math.abs(t.amount),
             'Category': t.category_name || 'Uncategorized',
-            'Deductible': t.tax_tag !== 'Non-Deductible' ? 'Yes' : 'No'
+            'Deductible': (t.tax_tag === 'Non-deductible' || t.tax_tag === 'Non-Deductible') ? 'No' : 'Yes'
         }));
     const wsExpense = XLSX.utils.json_to_sheet(expenseData);
     XLSX.utils.book_append_sheet(wb, wsExpense, 'Expenses');
@@ -280,7 +280,7 @@ export function exportToExcelAdvanced(
         .forEach(([month, data]) => {
             const profit = data.revenue - data.expenses;
             const margin = data.revenue > 0 ? ((profit / data.revenue) * 100).toFixed(2) + '%' : 'N/A';
-            monthlyData.push([month, data.revenue, data.expenses, profit, margin]);
+            monthlyData.push([month, data.revenue.toString(), data.expenses.toString(), profit.toString(), margin]);
         });
 
     const wsMonthly = XLSX.utils.aoa_to_sheet(monthlyData);

@@ -19,7 +19,8 @@ interface AnalyticsDashboardProps {
     companyName?: string;
 }
 
-type DateRange = '30d' | '90d' | '6m' | '1y' | 'all';
+// DateRange type will be used when recharts is installed
+// type DateRange = '30d' | '90d' | '6m' | '1y' | 'all';
 
 export function AnalyticsDashboard({ summary, transactions }: AnalyticsDashboardProps) {
 
@@ -121,6 +122,8 @@ export function AnalyticsDashboard({ summary, transactions }: AnalyticsDashboard
     );
 }
 
+// These component functions will be used when recharts is installed
+/*
 function ScoreBar({ label, score, weight }: { label: string; score: number; weight: string }) {
     const getColor = (s: number) => {
         if (s >= 80) return '#10b981';
@@ -202,3 +205,4 @@ function InsightCard({ insight }: { insight: { category: string; message: string
         </div>
     );
 }
+*/
