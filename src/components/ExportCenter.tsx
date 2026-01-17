@@ -1,5 +1,10 @@
 import { useState } from 'react';
 import type { Transaction, StatementSummary } from '../engine/types';
+import type { PitInput } from '../engine/pit';
+import type { CitInput } from '../engine/cit';
+import type { CgtInput } from '../engine/cgt';
+import type { WhtInput } from '../engine/wht';
+import type { VatInput } from '../engine/vat';
 import {
     exportTransactionsToCSV,
     exportSummaryToCSV,
@@ -7,7 +12,6 @@ import {
     exportToExcelAdvanced
 } from '../engine/exportUtils';
 import { generatePDFReport, generateExcelWorkbook } from '../engine/reports';
-import type { PitInput, CitInput, CgtInput, WhtInput, VatInput } from '../engine/types';
 
 interface ExportCenterProps {
     transactions: Transaction[];
@@ -205,7 +209,14 @@ export function ExportCenter({
                 gap: '1rem'
             }}>
                 <StatCard label="Total Transactions" value={transactions.length.toString()} />
-                <StatCard label="Date Range" value={`${new Date(summary.period_start).toLocaleDateString()} - ${new Date(summary.period_end).toLocaleDateString()}`} />
+                <StatCard
+                    label="Date Range"
+                    value={
+                        summary.period_start && summary.period_end
+                            ? `${new Date(summary.period_start).toLocaleDateString()} - ${new Date(summary.period_end).toLocaleDateString()}`
+                            : 'N/A'
+                    }
+                />
                 <StatCard label="Total Revenue" value={`₦${summary.total_inflow.toLocaleString()}`} />
                 <StatCard label="Total Expenses" value={`₦${summary.total_outflow.toLocaleString()}`} />
             </div>

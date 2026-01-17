@@ -56,7 +56,7 @@ export function exportTransactionsToCSV(
             t.tax_tag || 'None',
             t.dla_status || 'none',
             t.source_type || 'Manual',
-            t.vat_status || 'none'
+            t.tax_tag || 'none' // Using tax_tag instead of vat_status
         ];
 
         rows.push(row.join(','));
@@ -89,8 +89,8 @@ export function exportSummaryToCSV(
         ['Total Outflow', summary.total_outflow],
         ['Net Cash Flow', summary.net_cash_flow],
         ['Transaction Count', summary.transaction_count],
-        ['Period Start', new Date(summary.period_start).toLocaleDateString()],
-        ['Period End', new Date(summary.period_end).toLocaleDateString()]
+        ['Period Start', summary.period_start ? new Date(summary.period_start).toLocaleDateString() : 'N/A'],
+        ['Period End', summary.period_end ? new Date(summary.period_end).toLocaleDateString() : 'N/A']
     ];
 
     const csvContent = rows.map(row => row.join(',')).join('\n');
@@ -175,8 +175,8 @@ export function exportToExcelAdvanced(
         ['Net Profit/Loss', summary.net_cash_flow],
         ['Profit Margin %', summary.total_inflow > 0 ? ((summary.net_cash_flow / summary.total_inflow) * 100).toFixed(2) + '%' : 'N/A'],
         ['Transaction Count', summary.transaction_count],
-        ['Period Start', new Date(summary.period_start).toLocaleDateString()],
-        ['Period End', new Date(summary.period_end).toLocaleDateString()]
+        ['Period Start', summary.period_start ? new Date(summary.period_start).toLocaleDateString() : 'N/A'],
+        ['Period End', summary.period_end ? new Date(summary.period_end).toLocaleDateString() : 'N/A']
     ];
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
 
@@ -195,7 +195,7 @@ export function exportToExcelAdvanced(
         'Tax Tag': t.tax_tag || 'None',
         'DLA Status': t.dla_status || 'none',
         'Source': t.source_type || 'Manual',
-        'VAT Status': t.vat_status || 'none'
+        'Tax Type': t.tax_tag || 'none' // Using tax_tag instead of vat_status
     }));
     const wsTxns = XLSX.utils.json_to_sheet(txnData);
     XLSX.utils.book_append_sheet(wb, wsTxns, 'Transactions');
@@ -246,9 +246,9 @@ export function exportToExcelAdvanced(
         .forEach(([category, data]) => {
             categoryData.push([
                 category,
-                data.count,
-                data.total,
-                data.total / data.count,
+                data.count.toString(),
+                data.total.toString(),
+                (data.total / data.count).toString(),
                 ((data.total / totalAmount) * 100).toFixed(2) + '%'
             ]);
         });

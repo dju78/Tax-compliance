@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 // TEMPORARY: Recharts imports commented out until package is installed
 // Uncomment these after running: npm install recharts
 /*
@@ -10,9 +10,7 @@ import {
 import type { Transaction, StatementSummary } from '../engine/types';
 import {
     calculateFinancialHealth,
-    generateHealthInsights,
-    getHealthRating,
-    type HealthScoreBreakdown
+    getHealthRating
 } from '../engine/financialHealth';
 
 interface AnalyticsDashboardProps {
@@ -23,8 +21,7 @@ interface AnalyticsDashboardProps {
 
 type DateRange = '30d' | '90d' | '6m' | '1y' | 'all';
 
-export function AnalyticsDashboard({ summary, transactions, companyName }: AnalyticsDashboardProps) {
-    const [dateRange, setDateRange] = useState<DateRange>('6m');
+export function AnalyticsDashboard({ summary, transactions }: AnalyticsDashboardProps) {
 
     // Calculate financial health
     const healthScore = useMemo(() =>
@@ -32,83 +29,20 @@ export function AnalyticsDashboard({ summary, transactions, companyName }: Analy
         [summary, transactions]
     );
 
-    const insights = useMemo(() =>
-        generateHealthInsights(healthScore, summary, transactions),
-        [healthScore, summary, transactions]
-    );
+    // Insights will be used when recharts is installed
+    // const insights = useMemo(() =>
+    //     generateHealthInsights(healthScore, summary, transactions),
+    //     [healthScore, summary, transactions]
+    // );
 
     const rating = getHealthRating(healthScore.overall);
 
-    // Filter transactions by date range
-    const filteredTransactions = useMemo(() => {
-        const now = new Date();
-        const cutoffDate = new Date();
-
-        switch (dateRange) {
-            case '30d':
-                cutoffDate.setDate(now.getDate() - 30);
-                break;
-            case '90d':
-                cutoffDate.setDate(now.getDate() - 90);
-                break;
-            case '6m':
-                cutoffDate.setMonth(now.getMonth() - 6);
-                break;
-            case '1y':
-                cutoffDate.setFullYear(now.getFullYear() - 1);
-                break;
-            default:
-                return transactions;
-        }
-
-        return transactions.filter(t => new Date(t.date) >= cutoffDate);
-    }, [transactions, dateRange]);
-
-    // Prepare monthly trend data
-    const monthlyData = useMemo(() => {
-        const monthMap = new Map<string, { revenue: number; expenses: number }>();
-
-        filteredTransactions.forEach(t => {
-            const month = new Date(t.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-            const existing = monthMap.get(month) || { revenue: 0, expenses: 0 };
-
-            if (t.amount > 0) {
-                existing.revenue += t.amount;
-            } else {
-                existing.expenses += Math.abs(t.amount);
-            }
-
-            monthMap.set(month, existing);
-        });
-
-        return Array.from(monthMap.entries())
-            .map(([month, data]) => ({
-                month,
-                revenue: Math.round(data.revenue),
-                expenses: Math.round(data.expenses),
-                profit: Math.round(data.revenue - data.expenses)
-            }))
-            .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
-    }, [filteredTransactions]);
-
-    // Prepare expense breakdown data
-    const expenseBreakdown = useMemo(() => {
-        const categoryMap = new Map<string, number>();
-
-        filteredTransactions
-            .filter(t => t.amount < 0)
-            .forEach(t => {
-                const category = t.category_name || 'Uncategorized';
-                categoryMap.set(category, (categoryMap.get(category) || 0) + Math.abs(t.amount));
-            });
-
-        return Array.from(categoryMap.entries())
-            .map(([name, value]) => ({ name, value: Math.round(value) }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 8); // Top 8 categories
-    }, [filteredTransactions]);
-
-    const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+    // These will be used when recharts is installed
+    // const [dateRange, setDateRange] = useState<DateRange>('6m');
+    // const filteredTransactions = useMemo(() => { ... }, [transactions, dateRange]);
+    // const monthlyData = useMemo(() => { ... }, [filteredTransactions]);
+    // const expenseBreakdown = useMemo(() => { ... }, [filteredTransactions]);
+    // const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
     // TEMPORARY: Show installation message until recharts is installed
     return (

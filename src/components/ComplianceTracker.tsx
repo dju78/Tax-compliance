@@ -16,11 +16,11 @@ interface ComplianceItem {
 }
 
 interface ComplianceTrackerProps {
-    companyId?: string;
+    companyId: string;
     isPersonal?: boolean;
 }
 
-export function ComplianceTracker({ companyId, isPersonal }: ComplianceTrackerProps) {
+export function ComplianceTracker({ companyId: _companyId, isPersonal }: ComplianceTrackerProps) {
     const [complianceItems, setComplianceItems] = useState<ComplianceItem[]>([]);
     const [selectedType, setSelectedType] = useState<string>('ALL');
 
