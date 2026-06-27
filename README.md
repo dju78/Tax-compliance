@@ -1,73 +1,93 @@
-# React + TypeScript + Vite
+# DEAP Tax Compliance
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**by Daramola Digital Labs**
 
-Currently, two official plugins are available:
+> *Intelligent compliance. Better governance.*
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+DEAP Tax Compliance is an AI-powered tax compliance and regulatory reporting platform designed to help organisations improve financial governance, automate compliance workflows, monitor regulatory requirements, and support evidence-based decision-making.
 
-## React Compiler
+## 🌐 Live Demo
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Application:** https://deaptaxcompliance.netlify.app
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🏢 About Daramola Digital Labs
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Daramola Digital Labs develops practical, data-driven digital solutions for compliance, taxation, finance, research, education, healthcare, and public policy. Our products combine artificial intelligence, analytics, and automation to solve real-world challenges.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## ✨ Features
+
+* Tax compliance management
+* Regulatory reporting
+* Compliance monitoring dashboard
+* Financial governance tools
+* AI-assisted compliance insights
+* Risk monitoring
+* Performance reporting
+* Secure cloud-based platform
+
+---
+
+## 🛠 Tech Stack
+
+* React
+* TypeScript
+* Vite
+* Tailwind CSS
+* Supabase
+* OpenAI
+* Vercel / Netlify
+
+---
+
+## 🚀 Getting Started
+
+### Install dependencies
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Start the development server
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+
+### Build for production
+
+```bash
+npm run build
+```
+
+---
+
+## 🚀 Deployment
+
+The application is deployed using Netlify.
+
+---
+
+## 🗺 Roadmap
+
+Planned enhancements include:
+
+* AI compliance assistant
+* Advanced regulatory reporting
+* Automated audit trails
+* Risk scoring dashboard
+* Organisation analytics
+* Multi-user access control
+* Compliance document management
+* Real-time regulatory alerts
+
+---
+
+## 📄 Licence
+
+© 2026 Daramola Digital Labs. All rights reserved.
+
+DEAP Tax Compliance is a product of Daramola Digital Labs.
